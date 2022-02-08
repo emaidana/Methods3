@@ -1,5 +1,5 @@
 ---
-title: "Methods 3 - Assignment 1"
+title: "Methods 3 - Assignment 2"
 author: "Esteban David Maidana"
 date: "09/02/2022"
 output: pdf_document
@@ -14,6 +14,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ## install.packages("dplyr") ##Installed
 ## install.packages("ggplot2") ##Installed
 ## install.packages("skimr") ##Installed
+## install.packages("MuMIn") ## Installed
+## install.packages("pglm") ##Installed
+
 
 ## Required libraries
 library(rethinking) ##Loaded
@@ -24,261 +27,511 @@ library(skimr) ##Loaded
 library(lme4) ##Loaded
 library(data.table) ##Loaded
 library(nlme) ##Loaded
+library(MuMIn) ##Loaded
+library(pglm) ##Loaded
 
 ## LOAD DATA
 ## Get working directory
 setwd('/Users/estebandavidmaidana/Desktop')
 working_directory = getwd()
 ```
-## Assignment 1: Using mixed effects modelling to model hierarchical data (Winter & Grawunder, 2012). 
+## Assignment 2: Mixed effects modelling of response times, response counts, and accuracy (Andersen et al., 2019).
+## Part 1
 
-In this assignment we will be investigating the _politeness_ dataset of Winter and Grawunder (2012) and apply basic methods of multilevel modelling. 
-
-## Dataset
-
-The dataset has been shared on GitHub, so make sure that the csv-file is on your current path. Otherwise you can supply the full path.
-```{r}
-## LOAD DATA
-## Get working directory
-setwd('/Users/estebandavidmaidana/Desktop')
-working_directory = getwd()
-
-## Load data from csv file
-file = paste(working_directory, sep = "", "/working_directory/politeness.csv")
-politeness <- read.csv(file) ## Read in data
-```
 ## Exercises and objectives:
 
 The objectives of the exercises of this assignment are:  
-1) Learning to recognize hierarchical structures within datasets and describing them  
-2) Creating simple multilevel models and assessing their fitness  
-3) Write up a report about the findings of the study  
+1) Download and organise the data and model and plot staircase responses based on fits of logistic functions.  
+2) Fit multilevel models for response times.  
+3) Fit multilevel models for count data.  
 
-## REMEMBER: In your report, make sure to include code that can reproduce the answers requested in the exercises below.  
+## REMEMBER: In your report, make sure to include code that can reproduce the answers requested in the exercises below (__MAKE A KNITTED VERSION__)  
 
-## REMEMBER: This assignment will be part of your final portfolio.
+## REMEMBER: This assignment will be part of your final portfolio
 
-## Exercise 1: Describing the dataset and making some initial plots.
+## Exercise 1:
 
-1) Describe the dataset, such that someone who happened upon this dataset could understand the variables and what they contain  
-i. Also consider whether any of the variables in _politeness_ should be encoded as factors or have the factor encoding removed. Hint: ```?factor```
+Go to https://osf.io/ecxsj/files/ and download the files associated with Experiment 2 (there should be 29).  
+The data is associated with Experiment 2 of the article at the following DOI https://doi.org/10.1016/j.concog.2019.03.007  
+
+1) Put the data from all subjects into a single data frame  
 ```{r}
-## View contents of the defined object via the view function.
-view(politeness)
-
-## Access a broad overview of the defined object.
-skim(politeness)
-
-## Answer: Defaults to encoding subject, gender, attitude as characters and the rest as numeric. We should encode subject, gender, scenario, and attitude as factors. 
-
-politeness[1:4] = lapply(politeness[1:4], factor)
-
-## Answer: There are several variables here. Subject appears to be an ID variable for each subject, gender is M or F, scenario presumably refers to different testing conditions, and attitude seems to have the options polite or informal. Duration is duration in some..###(DOUBLE CHECK)!!! unit, the others are unclear.
+## Reading in all of the data as one .csv file. 
+temp <- list.files(pattern="*.csv") %>%
+  map_df(~read_csv(.))
 ```
 
-2) Create a new data frame that just contains the subject _F1_ and run two linear models; one that expresses _f0mn_ as dependent on _scenario_ as an integer; and one that expresses _f0mn_ as dependent on _scenario_ encoded as a factor  
-    i. Include the model matrices, $X$ from the General Linear Model, for these two models in your report and describe the different interpretations of _scenario_ that these entail
-    ii. Which coding of _scenario_, as a factor or not, is more fitting? You want to code it as a factor, presumably, since it's a category of scenario. 
+2) Describe the data and construct extra variables from the existing variables:  
+    i. add a variable to the data frame and call it _correct_ (have it be a _logical_ variable). Assign a 1 to each row where the subject indicated the correct answer and a 0 to each row where the subject indicated the incorrect answer (__Hint:__ the variable _obj.resp_ indicates whether the subject answered "even", _e_ or "odd", _o_, and the variable _target_type_ indicates what was actually presented.
 ```{r}
-## Creating new data frame that has just the subject F1.
-politeness_f1 <- politeness %>%
-  filter(subject == 'F1')
-
-## Factor version of linear model.
-f1lm_factor <- lm(f0mn~factor(scenario),data = politeness_f1)
-f1lm_int <- lm(f0mn~as.integer(scenario),data = politeness_f1)
-
-## Model matrices.
-fact_matrix <- model.matrix(f1lm_factor)
-int_matrix <- model.matrix(f1lm_int)
-
-## Answer: We can see one was just treated as a set of integers while the factor was broken into a bunch of dummy variables.
+temp2 <- temp %>%
+  mutate(target.abb = ifelse(target.type == 'odd','o','e')) %>%
+  mutate(correct = ifelse(obj.resp == target.abb, 1, 0))
 ```
-3) Make a plot that includes a subplot for each subject that has _scenario_ on the x-axis and _f0mn_ on the y-axis and where points are colour coded according to _attitude_
-    i. Describe the differences between subjects
-```{r}
-## Plot
-ggplot(drop_na(politeness), aes(as.integer(scenario), f0mn, color = attitude))+
-  geom_point()+
-  geom_line()+
-  labs(x='Scenario', y = 'f0mn')+
-  facet_wrap(~subject)
+   
+   ii. describe what the following variables in the data frame contain, _trial.type_, _pas_, _trial_, _target.contrast_, _cue_, _task_, _target_type_, _rt.subj_, _rt.obj_, _obj.resp_, _subject_ and _correct_. (That means you can ignore the rest of the variables in your description). For each of them, indicate and argue for what `class` they should be classified into, e.g. _factor_, _numeric_ etc.  
 
-# ggplot(drop_na(politeness), aes(as.integer(scenario), f0mn, color = attitude))+
-#   geom_point()+
-#   geom_smooth(method = 'lm', se = F)+
-#   labs(x='Scenario', y = 'f0mn')
-
-## Answer: Differences between subjects?
-```
-## Exercise 2: Comparison of models.
-
-For this part, make sure to have `lme4` installed.  
-You can install it using `install.packages("lme4")` and load it using `library(lme4)`  
-`lmer` is used for multilevel modelling
-```{r, eval=FALSE}
-library(lme4) ##Loaded
-
-mixed.model <- lmer(formula=..., data=...)
-example.formula <- formula(dep.variable ~ first.level.variable + (1 | second.level.variable))
-```
-1) Build four models and do some comparisons
-    i. a single level model that models _f0mn_ as dependent on _gender_
-```{r}
-## Single level model.
-single <- lmer(f0mn ~ (1|gender), data = politeness)
-```
-    ii. a two-level model that adds a second level on top of i. where unique intercepts are modelled for each _scenario_
-```{r}
-## Two-level model that models intercepts for _scenario_.
-scenario_twolvl <- lmer(f0mn ~ gender + (1|scenario), data = politeness)
-```
-    iii. a two-level model that only has _subject_ as an intercept 
-```{r}
-## Two-level model that only has _subject_ as an intercept.
-subject_twolvl <- lmer(f0mn ~ gender + (1|subject), data = politeness)
-```
-    iv. a two-level model that models intercepts for both _scenario_ and _subject_
-```{r}
-## Two-level model that models intercepts for both _subject_ and _scenario_.
-both_twolvl <- lmer(f0mn ~ gender + (1|subject) + (1|scenario), data = politeness)
-```
-    v. which of the models has the lowest residual standard deviation, also compare the Akaike Information Criterion `AIC`?
-```{r}
-## Answer: Lowest residual standard deviation is the one that includes  both _subject_ and _scenario_. 
-
-## Akaike Information Criterion 'AIC'
-AIC(single)
-AIC(scenario_twolvl)
-AIC(subject_twolvl)
-AIC(both_twolvl)
-
-## Answer: Lowest is the one that includes both.
-
-## Comment: stepAIC function would go through all the variables stepwise and add/remove them from a model to find the optimal model.
-```
-    vi. which of the second-level effects explains the most variance?
 ## Answer: 
 
-2) Why is our single-level model bad?
-    i. create a new data frame that has three variables, _subject_, _gender_ and _f0mn_, where _f0mn_ is the average of all responses of each subject, i.e. averaging across _attitude_ and_scenario_
-```{r}
-## New data frame. 
-subgen_politeness <- politeness %>%
-  group_by(subject, gender) %>%
-  summarize(f0mn = mean(f0mn, na.rm = TRUE))
+## trial.type: factor
+## Whether the trial was an experiment or utilized staircase procedure. 
+## From wikipedia: "In experiments, the ascending and descending methods are used alternately and the thresholds are averaged. A possible disadvantage of these methods is that the subject may become accustomed to reporting that they perceive a stimulus and may continue reporting the same way even beyond the threshold (the error of habituation). Conversely, the subject may also anticipate that the stimulus is about to become detectable or undetectable and may make a premature judgment (the error of anticipation).
+## To avoid these potential pitfalls, Georg von Békésy introduced the staircase procedure in 1960 in his study of auditory perception. In this method, the sound starts out audible and gets quieter after each of the subject's responses, until the subject does not report hearing it. At that point, the sound is made louder at each step, until the subject reports hearing it, at which point it is made quieter in steps again. This way the experimenter is able to "zero in" on the threshold.[23]"
 
-subgen_politeness
+## pas: factor (or integer, or ordinal)
+## Refers to "perceptual awareness scale" which is a categorical variable with four levels: No Experience (NE), Weak Glimpse (WG), Almost Clear Experience (ACE) and Clear Experience (CE) (corresponding to 1, 2, 3, and 4). Details in table 1 of the cited paper. Basically they quantify the degree to which a stimulus was perceived.
+
+## trial: (sort of factor, but I'd just encode as integer)
+## The trial number, from 0 up to 431, for each participant.
+
+## target.contrast: numeric
+## The contrast of the target stimulus relative to the background, adjusted to each participant's threshold. This is just literally the strength of the visual contrast (how much the image "pops" out against the background).
+
+## cue: technically factor?
+## Refers to the cue used before the stimulus is shown to the subject. This is a set of 2, 4, or 8 numbers, one of which will be the ultimate answer. By utilizing unique(temp2$cue), we see that there are 36  possible entries to this column, a number from 0 through 35. Presumably this refers to a "cue id" which maps to a specific cue being used.
+
+## task: factor
+## I'm not sure here, the three options are pairs, quadruplet, and singles. These must refer to the specific visual identification task in some way but I have no clue what the distinction is and the paper doesn't make this clear.
+
+## target.type: factor
+## Whether the number was even or odd.
+
+## rt.subj: numeric
+## Subjective response time, reaction time of PAS.
+
+## rt.obj: numeric
+## Objective response time, reaction time of Even vs Odd.
+
+## obj.resp: factor
+## Whether the subject responded 'even' or 'odd.'
+
+## subject: factor
+## The subject ID
+
+## correct: integer
+## If the subject was correct.
+
+```{r}
+library(skimr) ##Loaded
+## skim(temp2)
+## head(temp2)
+
+## Factors: trial type,  task, target.type, obj.resp, target.abb,  subject, pas, cue.
+## Integer: odd.digit, even.digit, correct, trial.
+## Rest as numeric.
+factors <- c('trial.type', 'pas', 'task', 'target.type', 'obj.resp', 'target.abb', 'subject', 'cue')
+integers <- c('odd.digit', 'even.digit', 'correct', 'trial')
+temp2[factors] <- lapply(temp2[factors], factor)
+temp2[integers] <- lapply(temp2[integers], as.integer)
 ```
-    ii. build a single-level model that models _f0mn_ as dependent on _gender_ using this new dataset
+
+  iii. for the staircasing part __only__, create a plot for each subject where you plot the estimated function (on the _target.contrast_ range from 0-1) based on the fitted values of a model (use `glm`) that models _correct_ as dependent on _target.contrast_. These plots will be our _no-pooling_ model. Comment on the fits - do we have enough data to plot the logistic functions?
 ```{r}
-## Single-level model.
-single_summary <-lmer(f0mn ~ (1|gender), data = subgen_politeness)
-```
-    iii. make Quantile-Quantile plots, comparing theoretical quantiles to the sample quantiles) using `qqnorm` and `qqline` for the new single-level model and compare it to the old single-level model (from 1).i). Which model's residuals ($\epsilon$) fulfil the assumptions of the General Linear Model better?)
-    
-## General linear model assumptions:
-## - The data are independently distributed.
-## - The dependent variable does not need to be normally distrubuted, but it needs to follow some kind of exponential distribution (binomial, poisson, multinomial, normal...).
-```{r}
-## QQ plot of our new lmer model
-qqnorm(resid(single_summary))
-qqline(resid(single_summary))
+g <- function(x) log(x/(1-x))
+inv.g <- function(x) exp(x) / (1 + exp(x))
 
-## QQ plot of our old lmer model.
-qqnorm(resid(single))
-qqline(resid(single))
+## Filtering the data.
+staircase <- temp2 %>%
+  filter(trial.type == 'staircase') %>%
+  mutate(correct = as.integer(correct))
 
-## QQ plots of our data sets. 
-qqnorm(subgen_politeness$f0mn)
-qqline(subgen_politeness$f0mn)
+staircase_glm <- glm(correct ~ target.contrast, family = 'binomial', data = staircase)
 
-qqnorm(politeness$f0mn)
-qqline(politeness$f0mn)
-```
-    iv. Also make a quantile-quantile plot for the residuals of the  multilevel model with two intercepts. Does it look alright?
-```{r}
-## QQ plot
-qqnorm(resid(both_twolvl))
-qqline(resid(both_twolvl))
-```
-3) Plotting the two-intercepts model
-    i. Create a plot for each subject, (similar to part 3 in Exercise 1), this time also indicating the fitted value for each of the subjects for each of the scenarios (hint use `fixef` to get the "grand effects" for each gender and `ranef` to get the subject- and scenario-specific effects)
-```{r}
-fixef(both_twolvl)
-ranef(both_twolvl)
+staircase2 <- staircase %>%
+  mutate(predicted.response = predict(staircase_glm, type = 'response'), predicted = predict(staircase_glm))
 
-## First I made a dataframe containing the value contributed by the subject.
-test <- data.frame(subj_int = ranef(both_twolvl)[1])
-rownames(test)
-
-test2 <- data.frame(test, subject = rownames(test)) 
-
-## Here I added a gender column from the subject names (there are lots of better ways to do this).
-test2$gender = "M"
-for (i in 1:nrow(test2)) {
-  if ("F1" %in% test2$subject[i] |"F2" %in% test2$subject[i] |"F3" %in% test2$subject[i] |"F4" %in% test2$subject[i] |"F5" %in% test2$subject[i] |"F6" %in% test2$subject[i] |"F7" %in% test2$subject[i] |"F8" %in% test2$subject[i] |"F9" %in% test2$subject[i]) {
-    test2$gender[i] = "F"
-  }
-}
-
-## Renaming to subgender (for subject and gender).
-subgender <- test2
-
-## Repeating. This time making a dataframe by scenario.
-test <- data.frame(ranef(both_twolvl)[2])
-
-test2 <- data.frame(test, scenario = rownames(test)) 
-test2 <- rename(test2, scenario.int = X.Intercept.)
-
-
-## Here I'm making a for loop where it spits out a dataframe with repeats of the scenarios, each with a different subject name next to it.
-test3 <- test2
-test3$subject = NA
-test4 = test3[0,1:3]
-for (i in 1:nrow(subgender)) {
-  test3$subject = subgender$subject[i]
-  test4 = rbind(test4, test3)
-}
-
-scenarios = test4
-
-## This allowed me to right join them, by subject. 
-combined <-right_join(subgender,scenarios, by = 'subject')
-combined <- rename(combined,subj.int = X.Intercept.)
-
-## Finally, took the combined dataset, and created a gender integer column based off of the fixed effects of gender.
-full <- combined %>%
-  mutate(gender.int = ifelse(gender == "F", 246.7650, 131.5904)) %>%
-  mutate(predicted = subj.int + gender.int + scenario.int)
-
-ggplot(full, aes(scenario, predicted))+
-  geom_point()+
-  labs(y = 'predicted f0mn')+
+## This plots a line with the predicted values, and then gives a point plot of the actual values. 
+ggplot(staircase2, aes(x = target.contrast, y = predicted.response))+
+  geom_line(color = 'red')+
+  geom_point(aes(target.contrast, correct))+
   facet_wrap(~subject)
-```
-## Exercise 3: Now with attitude.
 
-1) Carry on with the model with the two unique intercepts fitted (_scenario_ and _subject_).
-    i. now build a model that has _attitude_ as a main effect besides _gender_
+## ggplot(staircase2, aes(x = target.contrast, y = predicted))+
+##   geom_point()+
+##   facet_wrap(~subject)
+
+## Answer: Testing alt method, note that since this facet wraps, we end up with a different log regression for each. Not what the question asked for so we ignore this, but it does allow use of geom_smooth in place of actually generating a GLM model.
+
+## ggplot(staircase2, aes(x = target.contrast, y = correct))+
+##   geom_smooth(color = 'red', se = F, method = 'glm', method.args = list(family = 'binomial'))+
+##   geom_point()+
+##   facet_wrap(~subject)
+```
+  iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_  
 ```{r}
+library(lme4) ##Loaded
 
-```
-    ii. make a separate model that besides the main effects of _attitude_ and _gender_ also include their interaction
-```{r}
+staircase_glmer <- glmer(correct ~ target.contrast + (1+target.contrast|subject), data = staircase, family = 'binomial')
 
+staircase3 <- staircase2 %>%
+  mutate(glmer = predict(staircase_glmer, type = 'response'))
+
+## Plot. 
+ggplot(staircase3, aes(x = target.contrast, y = predicted.response))+
+  geom_line(color = 'red')+
+  geom_line(aes(x = target.contrast, y = glmer), color = 'blue')+
+  geom_point(aes(target.contrast, correct))+
+  facet_wrap(~subject)
+
+## Comment: Results fit the data better than before overall. They're capturing the dropoff near zero contrast much better. 
 ```
-    iii. describe what the interaction term in the model says about Korean men's pitch when they are polite relative to Korean women's pitch when they are polite (you don't have to judge whether it is interesting) 
-    
+  
+  v. in your own words, describe how the partial pooling model allows for a better fit for each subject. 
+
 ## Answer
 
-2) Compare the three models (1. gender as a main effect; 2. gender and attitude as main effects; 3. gender and attitude as main effects and the interaction between them. For all three models model unique intercepts for _subject_ and _scenario_) using residual variance, residual standard deviation and AIC. 
-```{r}
+## Exercise 2:
 
+## Now we __only__ look at the _experiment_ trials (_trial.type_)  
+
+1) Pick four subjects and plot their Quantile-Quantile (Q-Q) plots for the residuals of their objective response times (_rt.obj_) based on a model where only intercept is modeled.
+```{r}
+foursubs <- temp2 %>%
+  filter(subject == '001' | subject == '002'| subject == '003' | subject == '004', trial.type == 'experiment')
+
+exp_single <- lmer(rt.obj ~ (1|subject), data = foursubs )
+
+## We want to take our residuals and add them back to the original dataframe so that we can easily facet them using ggplot.
+
+foursubs2 <- foursubs %>%
+  mutate(resids =  resid(exp_single))
+
+## Using ggplot functions to make the qq_plots, this: 
+ggplot(data = foursubs2, mapping = aes(sample = resids))+
+  stat_qq()+
+  stat_qq_line()+
+  facet_wrap(~subject)
+
+## This doesn't look great for any of the subjects and looks horrible for 2 and 3. 
 ```
-3)  Choose the model that you think describe the data the best - and write a short report on the main findings based on this model. At least include the following:
-  i. describe what the dataset consists of  
-  ii. what can you conclude about the effect of gender and attitude on pitch (if anything)?  
-  iii. motivate why you would include separate intercepts for subjects and scenarios (if you think they should be included)  
-  iv. describe the variance components of the second level (if any)  
-  v. include a Quantile-Quantile plot of your chosen model  
+    i. comment on these    
+    ii. does a log-transformation of the response time data improve the Q-Q-plots?  
+
+2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification).
+```{r}
+## Partial pooling model.
+
+## install.packages("MuMIn")
+## library(MuMIn) ##Loaded
+
+exp_only <- temp2 %>%
+  filter(trial.type == 'experiment')
+
+## The simplest model, only accounting for the intercepts of subject.
+exp_pp1 <- lmer(rt.obj ~ task + (1|subject), REML = FALSE, data = exp_only)
+
+AIC(exp_pp1)
+summary(exp_pp1)
+
+## More complicated model, assigning both different slopes and intercepts for each subject (this causes a singular fit, let's not use thi.).
+exp_pp2 <- lmer(rt.obj ~ task + (1+task|subject), REML = FALSE, data = exp_only)
+
+AIC(exp_pp2)
+
+## Raises AIC.
+exp_pp3 <- lmer(rt.obj ~ task + (1|subject)+(1|target.type), data = exp_only, REML = F)
+
+AIC(exp_pp3)
+r.squaredGLMM(exp_pp3)
+summary(exp_pp3)
+
+## This raises it and lowers r^2.
+exp_pp4 <- lmer(rt.obj ~ task + (1|subject)+ (1|cue), data = exp_only, REML = F)
+summary(exp_pp4)
+r.squaredGLMM(exp_pp4)
+AIC(exp_pp4)
+
+## We want to keep adding to this model until we find some optimal mix of R2 and AIC/BIC, we want the lowest possible AIC and highest possible R2.
+
+## Going with exp_pp3 for now.
+```
+
+  i. which would you include among your random effects and why? (support your choices with relevant measures, taking into account variance explained and number of parameters going into the modelling)  
+  
+## Answer
+  
+  ii. explain in your own words what your chosen models says about response times between the different tasks.
+  
+## Answer
+  
+3) Now add _pas_ and its interaction with _task_ to the fixed effects  
+```{r}
+exp_pp_pas <- lmer(rt.obj ~ task + pas + pas*task + (1|subject)+(1|target.type), data = exp_only, REML = F)
+```
+  i. how many types of group intercepts (random effects) can you add without ending up with convergence issues or singular fits?  
+    
+## Answer: I'm getting 2 as the answer here, but it could be more, try each combo. 
+
+  ii. create a model by adding random intercepts (without modelling slopes) that results in a singular fit - then use `print(VarCorr(<your.model>), comp='Variance')` to inspect the variance vector - explain why the fit is singular (Hint: read the first paragraph under details in the help for `isSingular`)
+
+## Just do this by adding more and more (1|variables) + .... to the model until you get a singularity warning.
+
+   iii. in your own words - how could you explain why your model would result in a singular fit?  
+
+## Answer: 
+    
+## Exercise 3:
+
+1) Initialise a new data frame, `data.count`. _count_ should indicate the number of times they categorized their experience as _pas_ 1-4 for each _task_. I.e. the data frame would have for subject 1: for task:singles, pas1 was used # times, pas2 was used # times, pas3 was used # times and pas4 was used # times. You would then do the same for task:pairs and task:quadruplet.
+```{r}
+## This doesn't specify, so we are using both the staircase and experiment trial types.
+
+## you can start from this if you want to, but you can also make your own from scratch
+# data.count <- data.frame(count = numeric(), 
+#                          pas = numeric(), ## remember to make this into a factor afterwards
+#                          task = numeric(), ## and this too
+#                          subject = numeric()) ## and this too
+
+
+## This should really be done in dplyr with summarise
+
+data.count <- temp2 %>%
+  group_by(subject, pas, task) %>%
+  summarize(count =  n())%>%
+  arrange(subject)
+```        
+
+2) Now fit a multilevel model that models a unique "slope" for _pas_ for each _subject_ with the interaction between _pas_ and _task_ and their main effects being modelled  
+
+## nooot sure what the heck this is really asking for, a unique slope.. what is the response variable? Doing it with count from the dataset we just created
+
+```{r}
+count_model <- lmer(count ~ pas + task + pas*task + (1+pas|subject), data = data.count)
+```
+  i. which family should be used?  
+    
+## The fact this is asking for a family tells me they want a glm model but idk what they are talking about. 
+
+  ii. why is a slope for _pas_ not really being modelled?  
+  iii. if you get a convergence error, try another algorithm (the default is the _Nelder_Mead_) - try (_bobyqa_) for which the `dfoptim` package is needed. In `glmer`, you can add the following for the `control` argument: `glmerControl(optimizer="bobyqa")` (if you are interested, also have a look at the function `allFit`)
+  iv. when you have a converging fit - fit a model with only the main effects of _pas_ and _task_. Compare this with the model that also includes the interaction  
+  v. indicate which of the two models, you would choose and why  
+  vi. based on your chosen model - write a short report on what this says about the distribution of ratings as dependent on _pas_ and _task_  
+  vii. include a plot that shows the estimated amount of ratings for four subjects of your choosing 
+
+3) Finally, fit a multilevel model that models _correct_ as dependent on _task_ with a unique intercept for each _subject_  
+    i. does _task_ explain performance?  
+    ii. add _pas_ as a main effect on top of _task_ - what are the consequences of that?  
+    iii. now fit a multilevel model that models _correct_ as dependent on _pas_ with a unique intercept for each _subject_
+    iv. finally, fit a model that models the interaction between _task_ and _pas_  and their main effects  
+    v. describe in your words which model is the best in explaining the variance in accuracy  
+
+## Assignment 2: Mixed effects modelling of response times, response counts, and accuracy (Andersen et al., 2019).
+## Part 1
+
+## Exercises and objectives:
+
+The objectives of the exercises of this assignment are based on: https://doi.org/10.1016/j.concog.2019.03.007  
+  
+4) Download and organise the data from experiment 1  
+5) Use log-likelihood ratio tests to evaluate logistic regression models  
+6) Test linear hypotheses  
+7) Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them  
+
+## REMEMBER: In your report, make sure to include code that can reproduce the answers requested in the exercises below (__MAKE A KNITTED VERSION__).  
+
+## REMEMBER: This is part 2 of Assignment 2 and will be part of your final portfolio.
+
+## EXERCISE 4: Download and organise the data from experiment 1.
+
+Go to https://osf.io/ecxsj/files/ and download the files associated with Experiment 1 (there should be 29).  
+The data is associated with Experiment 1 of the article at the following DOI https://doi.org/10.1016/j.concog.2019.03.007  
+```{r}
+## Reading in all of the data as one .csv file.
+
+## LOAD DATA
+## Get working directory
+setwd('/Users/estebandavidmaidana/Desktop')
+working_directory = getwd()
+
+setwd("~/Documents/Employment:School paperwork/Tutoring work/Esteban R work/Thesis stuff/Assignment 2 /experiment_1")
+temp3 <- list.files(pattern="*.csv") %>%
+  map_df(~read_csv(.))
+```
+  
+1) Put the data from all subjects into a single data frame - note that some of the subjects do not have the _seed_ variable. For these subjects, add this variable and make in _NA_ for all observations. (The _seed_ variable will not be part of the analysis and is not an experimental variable)  
+    i. Factorise the variables that need factorising  
+    ii. Remove the practice trials from the dataset (see the _trial.type_ variable)  
+    iii. Create a _correct_ variable  
+    iv. Describe how the _target.contrast_ and _target.frames_ variables differ compared to the data from part 1 of this assignment  
+```{r}
+##
+temp3 <- temp3 %>%
+  mutate(target.abb = ifelse(target.type == 'odd','o','e')) %>%
+  mutate(correct = ifelse(obj.resp == target.abb, 1, 0)) %>%
+  filter(trial.type != 'practice')
+
+## 
+factors <- c('trial.type', 'pas', 'task', 'target.type', 'obj.resp', 'target.abb', 'subject', 'cue')
+integers <- c('odd.digit', 'even.digit', 'correct', 'trial', 'target.frames')
+temp3[factors] <- lapply(temp3[factors], factor)
+temp3[integers] <- lapply(temp3[integers], as.integer)
+
+## Answer: Target frames are allowed to vary from 1 to 9 in this experiment where in part 1 they were held constant at 3 frames. Target contrast is held constant at 0.1 where in the previous part it was allowed to vary between .01 and 1 continuously. 
+```
+# EXERCISE 5: Use log-likelihood ratio tests to evaluate logistic regression models.
+
+1) Do logistic regression - _correct_ as the dependent variable and _target.frames_ as the independent variable. (Make sure that you understand what _target.frames_ encode). Create two models - a pooled model and a partial-pooling model. The partial-pooling model should include a subject-specific intercept.  
+```{r}
+## First creating a pooled model using pglm. 
+## install.packages("pglm") ##Installed
+## library(pglm) ##Loaded
+
+##
+pooled_correct <- glm(correct ~ target.frames, data = temp3, family = 'binomial')
+
+##
+pp_correct <- glmer(correct ~ target.frames + (1|subject), data = temp3, family = 'binomial')
+```
+  
+  i. the likelihood-function for logistic regression is: $L(p)={\displaystyle\prod_{i=1}^Np^{y_i}(1-p)^{(1-y_i)}}$ (Remember the probability mass function for the Bernoulli Distribution). Create a function that calculates the likelihood.  
+  ii. the log-likelihood-function for logistic regression is: $l(p) = {\displaystyle\sum_{i=1}^N}[y_i\ln{p}+(1-y_i)\ln{(1-p)}$. Create a function that calculates the log-likelihood
+```{r}
+g <- function(x) log(x/(1-x))
+inv.g <- function(x) exp(x) / (1 + exp(x))
+
+## Likelihood function, resp should be the vector of actual response variables, prob should be the predicted probability that yi = 1.
+likelihood <- function(prob, resp) {
+  b=1
+  for (i in 1:length(prob)) {
+    a = prob[i]^resp[i]*(1-prob[i])^(1-resp[i])
+    b = b*a
+  }
+  print(b)}
+
+## Log likelihood function, resp should be the vector of actual response variables, prob should be the predicted probability that yi = 1.
+log_like <- function(prob, resp) {
+  b=0
+  for (i in 1:length(prob)) {
+    a = resp[i]*log(prob[i])+(1-resp[i])*log(1-prob[i])
+    b = b+a
+  }
+  print(b)}
+
+correct_prob <- data.frame(correct = temp3$correct, predicted = predict(pooled_correct, type = 'response'))
+
+correct_prob
+
+likelihood(correct_prob$predicted, correct_prob$correct)
+log_like(correct_prob$predicted, correct_prob$correct)
+
+logLik(pooled_correct)
+lo
+
+predict(pooled_correct)
+
+## The issue with likelihood is that the computer predicted "1" and "0" for some of the probabilities, this is because there is limited precision, so any zeroes get multiplied in and send the whole thing to zero. That's why log likelihood is nice. 
+```
+  
+  iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision? 
+  
+  iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)  
+```{r}
+##
+correct_partialprob <- data.frame(correct = temp3$correct, predicted = predict(pp_correct, type = 'response'))
+log_like(correct_partialprob$predicted, correct_partialprob$correct)
+logLik(pp_correct)
+
+## Notably off by just a little bit.
+```
+    
+2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, then add subject-level intercepts, then add a group-level effect of _target.frames_ and finally add subject-level slopes for _target.frames_. Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
+```{r}
+## Some example models to start:
+model1 <- glm(correct ~ 1, family = 'binomial', data = temp3)
+model2 <- glmer(correct ~ (1|subject), family = 'binomial', data = temp3)
+model3 <- glmer(correct ~ target.frames + (1|subject), family = 'binomial', data = temp3)
+model4 <- glmer(correct ~ target.frames + (1+target.frames|subject), family = 'binomial', data = temp3)
+
+## Creating a function for the loglikelihood ratio test, this takes the two models and computes a p-value. Test at .05 significance. DF is obtained by taking the loglik df from B and subtracting from A. Simpler model should go first.
+loglik_test <- function(m1, m2, df) {
+  A <- logLik(m1)
+  B <- logLik(m2)
+  test.stat <- -2*(as.numeric(A) - as.numeric(B))
+  p.val <- pchisq(test.stat, df, lower.tail = F)
+  print(p.val)
+}
+
+loglik_test(model3, model4, 2)
+loglik_test(model1, model2, 1)
+
+## Very significant, note that the numerical input in the second slot of pchisq() is the degrees of freedom, taken from df(B) - df(A).
+```
+  i. write a short methods section and a results section where you indicate which model you chose and the statistics relevant for that choice. Include a plot of the estimated group-level function with `xlim=c(0, 8)` that includes the estimated subject-specific functions.
+  ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)
+  
+3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this  
+  i. if your model doesn't converge, try a different optimizer  
+  ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?  
+
+# EXERCISE 6: Test linear hypotheses.
+
+In this section we are going to test different hypotheses. We assume that we have already proved that more objective evidence (longer duration of stimuli) is sufficient to increase accuracy in and of itself and that more subjective evidence (higher PAS ratings) is also sufficient to increase accuracy in and of itself.  
+We want to test a hypothesis for each of the three neighbouring differences in PAS, i.e. the difference between 2 and 1, the difference between 3 and 2 and the difference between 4 and 3. More specifically, we want to test the hypothesis that accuracy increases faster with objective evidence if subjective evidence is higher at the same time, i.e. we want to test for an interaction.
+
+1) Fit a model based on the following formula: `correct ~ pas * target.frames + (target.frames | subject))`
+    i. First, use `summary` (yes, you are allowed to!) to argue that accuracy increases faster with objective evidence for PAS 2 than for PAS 1. 
+```{r}
+ex6.1 <- glmer(correct ~ pas * target.frames + (target.frames | subject), data = temp3, family = 'binomial')
+
+summary(ex6.1)
+```
+    
+2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
+    i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
+    ii. Now test the hypothesis that accuracy increases faster with objective evidence for PAS 3 than for PAS 2.
+    iii. Also test the hypothesis that accuracy increases faster with objective evidence for PAS 4 than for PAS 3
+
+3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
+
+### Snippet for 6.2.i
+```{r, eval=FALSE}
+## Testing whether PAS 2 is different from PAS 1
+contrast.vector <- matrix(c(0, 0, 0, 0, 0, 1, 0, 0), nrow=1)
+gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
+print(summary(gh))
+
+## As another example, we could also test whether there is a difference in intercepts between PAS 2 and PAS 3.
+contrast.vector <- matrix(c(0, -1, 1, 0, 0, 0, 0, 0), nrow=1)
+gh <- glht(pas.intact.tf.ranslopeint.with.corr, contrast.vector)
+print(summary(gh))
+```
+
+# EXERCISE 7: Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them.  
+
+We saw in 5.3 that the estimated functions went below chance at a target duration of 0 frames (0 ms). This does not seem reasonable, so we will be trying a different approach for fitting here.  
+We will fit the following function that results in a sigmoid, $f(x) = a + \frac {b - a} {1 + e^{\frac {c-x} {d}}}$  
+It has four parameters: _a_, which can be interpreted as the minimum accuracy level, _b_, which can be interpreted as the maximum accuracy level, _c_, which can be interpreted as the so-called inflexion point, i.e. where the derivative of the sigmoid reaches its maximum and _d_, which can be interpreted as the steepness at the inflexion point. (When _d_ goes towards infinity, the slope goes towards a straight line, and when it goes towards 0, the slope goes towards a step function).  
+  
+## We can define a function of a residual sum of squares as below:
+```{r, eval=FALSE}
+
+RSS <- function(dataset, par)
+{
+    ## "dataset" should be a data.frame containing the variables x (target.frames)
+    ## and y (correct)
+    
+    ## "par" are our four parameters (a numeric vector) 
+    ## par[1]=a, par[2]=b, par[3]=c, par[4]=d
+    x <- dataset$x
+    y <- dataset$y
+    y.hat <- ## you fill in the estimate of y.hat
+    RSS <- sum((y - y.hat)^2)
+    return(RSS)
+}
+```
+
+1) Now, we will fit the sigmoid for the four PAS ratings for Subject 7
+  i. use the function `optim`. It returns a list that among other things contains the four estimated parameters. You should set the following arguments:  
+    `par`: you can set _c_ and _d_ as 1. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
+    `fn`: which function to minimise?  
+    `data`: the data frame with _x_, _target.frames_, and _y_, _correct_ in it  
+    `method`: 'L-BFGS-B'  
+    `lower`: lower bounds for the four parameters, (the lowest value they can take), you can set _c_ and _d_ as `-Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)  
+    `upper`: upper bounds for the four parameters, (the highest value they can take) can set _c_ and _d_ as `Inf`. Find good choices for _a_ and _b_ yourself (and argue why they are appropriate)    
+  ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
+  iii. Create a similar plot for the PAS ratings on a single plot (for subject 7), but this time based on the model from 6.1 `xlim=c(0, 8)`   
+  iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way  
+
+2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
+  i. compare with the figure you made in 5.3.ii and comment on the differences between the fits - mention some advantages and disadvantages of both.
