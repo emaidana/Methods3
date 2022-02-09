@@ -2,34 +2,25 @@
 title: "Methods 3 - Assignment 3"
 author: "Esteban David Maidana"
 date: "09/02/2022"
-output: pdf_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 ## Required Packages 
-## install.packages("rethinking") ##Installed
-## install.packages("slider") ##Installed
-## install.packages("plotly") ##Installed
-## install.packages("dplyr") ##Installed
-## install.packages("ggplot2") ##Installed
-## install.packages("skimr") ##Installed
+## install.packages("reticulate") ##Installed
 
 ## Required libraries
-library(rethinking) ##Loaded
-library(tidyverse) ##Loaded
-library(dplyr) ##Loaded
-library(ggplot2) ##Loaded
-library(skimr) ##Loaded
-library(lme4) ##Loaded
-library(data.table) ##Loaded
-library(nlme) ##Loaded
+library(reticulate) ##Loaded
+# py_install("numpy")
+# py_install("os")
+# py_install("matplotlib")
+# py_install("pandas")
+# py_install("scikit-learn")
 
-## LOAD DATA
-## Get working directory
-setwd('/Users/estebandavidmaidana/Desktop')
-working_directory = getwd()
 ```
 
 ## Assignment 3: Using logistic regression to classify subjective experience from brain data.
@@ -47,29 +38,54 @@ working_directory = getwd()
 ## Exercise 1: Load the magnetoencephalographic recordings and do some initial plots to understand the data  
 
 The files `megmag_data.npy` and `pas_vector.npy` can be downloaded here (http://laumollerandersen.org/data_methods_3/megmag_data.npy) and here (http://laumollerandersen.org/data_methods_3/pas_vector.npy)   
+```{python}
+import numpy as np
+import os
+from os.path import join
+import matplotlib.pyplot as plt
+import pandas as pd
+
+os.listdir()
+```
+
 
 1) Load `megmag_data.npy` and call it `data` using `np.load`. You can use `join`, which can be imported from `os.path`, to create paths from different string segments  
-  i. The data is a 3-dimensional array. The first dimension is number of repetitions of a visual stimulus , the second dimension is the number of sensors that record magnetic fields (in Tesla) that stem from neurons activating in the brain, and the third dimension is the number of time samples. How many repetitions, sensors and time samples are there?  
-```{r}
-## Finding the number of 1: repetitions of visual stimulus, 2: number of sensors, and 3: number of time samples
 
-print(data.shape)
+```{python}
+## LOAD DATA
+## Get working directory
+wd = "/Users/estebandavidmaidana/Desktop/working_directory"
 
-## Answer: There are 682 repetitions, 102 sensors per repetition, and 251 time samples per sensor.
+os.chdir(wd)
+data = np.load('megmag_data.npy')
+
+## LOAD DATA
+# ## Get working directory
+# setwd('/Users/estebandavidmaidana/Desktop')
+# working_directory = getwd()
+# 
+# ## Load data from csv file
+# file = paste(working_directory, sep = "", "/working_directory/politeness.csv")
+# politeness <- read.csv(file) ## Read in data
 ```
-  
-  ii. The time range is from (and including) -200 ms to (and including) 800 ms with a sample recorded every 4 ms. At time 0, the visual stimulus was briefly presented. Create a 1-dimensional array called `times` that represents this.  
-```{r}
-## Creating a 1 degree array called "times" starts at -200 ms and ends at 800ms with timesteps of 4ms.
 
+  i. The data is a 3-dimensional array. The first dimension is number of repetitions of a visual stimulus , the second dimension is the number of sensors that record magnetic fields (in Tesla) that stem from neurons activating in the brain, and the third dimension is the number of time samples. How many repetitions, sensors and time samples are there?  
+```{python}
+## Finding the number of 1: repetitions of visual stimulus, 2: number of sensors, and 3: number of time samples
+print(data.shape)
+```
+## Answer: There are 682 repetitions, 102 sensors per repetition, and 251 time samples per sensor.
+
+  ii. The time range is from (and including) -200 ms to (and including) 800 ms with a sample recorded every 4 ms. At time 0, the visual stimulus was briefly presented. Create a 1-dimensional array called `times` that represents this.  
+```{python}
+## Creating a 1 degree array called "times" starts at -200 ms and ends at 800ms with timesteps of 4ms.
 times = np.arange(-200,801, 4)
 times
 ```
   
   iii. Create the sensor covariance matrix $\Sigma_{XX}$: $$\Sigma_{XX} = \frac 1 N \sum_{i=1}^N XX^T$$ $N$ is the number of repetitions and $X$ has $s$ rows and $t$ columns (sensors and time), thus the shape is $X_{s\times t}$. Do the sensors pick up independent signals? (Use `plt.imshow` to plot the sensor covariance matrix)  
-```{r}
+```{python}
 ## Create covariance matrix.
-
 N = len(data)
 
 ## Some test code: test = np.asmatrix(data[0,])*np.asmatrix(np.transpose(data[0,]))
@@ -83,19 +99,18 @@ covmatrix = covmatrix/len(data)
 
 covariance_image = plt.imshow(covmatrix, cmap = 'seismic', vmax = 5e-23, vmin = -5e-23)
 plt.colorbar(covariance_image)
+```
 
 ## Answer: Generally covariance is around zero which suggests the sensors are picking up independent signals.
-```
-  
-  iv. Make an average over the repetition dimension using `np.mean` - use the `axis` argument. (The resulting array should have two dimensions ~~with time as the first and magnetic field as the second~~ with sensor as the first and time as the second) 
-```{r}
-## Make an average over the repetition dimension to end up with one averaged matrix.
 
+  iv. Make an average over the repetition dimension using `np.mean` - use the `axis` argument. (The resulting array should have two dimensions ~~with time as the first and magnetic field as the second~~ with sensor as the first and time as the second) 
+```{python}
+## Make an average over the repetition dimension to end up with one averaged matrix.
 avg_data = np.mean(data, axis = 0)
 ```
   
   v. Plot the magnetic field (based on the average) as it evolves over time for each of the sensors (a line for each) (time on the x-axis and magnetic field on the y-axis). Add a horizontal line at $y = 0$ and a vertical line at $x = 0$ using `plt.axvline` and `plt.axhline` 
-```{r}
+```{python}
 ## Plot a line for each sensor with the magnetic field on the y axis and the time on the x axis (can use the times array made earlier).
 
 ## First some test code.
@@ -105,12 +120,10 @@ for i in range(0, len(avg_data)):
     plt.plot(times,avg_data[i])
 plt.axvline()
 plt.axhline()
-
-## Easier than I expected, and look - cool different colored squiggles.
 ```
   
   vi. Find the maximal magnetic field in the average. Then use `np.argmax` and `np.unravel_index` to find the sensor that has the maximal magnetic field. 
-```{r}
+```{python}
 ## Find the maximal magnetic field in the average and then find the sensor w/ the max magnetic field.
 np.max(avg_data)
 
@@ -121,7 +134,7 @@ avg_data[73,112]
 ```
   
   vii. Plot the magnetic field for each of the repetitions (a line for each) for the sensor that has the maximal magnetic field. Highlight the time point with the maximal magnetic field in the average (as found in 1.1.v) using `plt.axvline`  
-```{r}
+```{python}
 ## Plotting the magnetic field for each repetition on sensor 74, and then putting a line at the 113'th timestep using the function np.axvline.
 
 for i in range(0,len(data)):
@@ -132,18 +145,18 @@ times[112]
 ```
   
   viii. Describe in your own words how the response found in the average is represented in the single repetitions. But do make sure to use the concepts _signal_ and _noise_ and comment on any differences on the range of values on the y-axis  
-```{r}
-## Answer: The range of values on the y axis is much wider here than in the average, going from -15*10^-13 to 15*10^-13 - about 5x the range in both directions compared to the average version. There is a lot of random noise, however if we consider the main "channel" (the thick central pool of lines) you do really see both a bump up in the negative y value and a peak in the positive y value this suggests that there is a real signal being seen there - there is a peak at 248ms. You do have higher individual peaks past this point, however these are noise as the main channel does not reflect those higher values. 
-```
+## Answer: The range of values on the y axis is much wider here than in the average, going from -15*10^-13 to 15*10^-13 - about 5x the range in both directions compared to the average version. There is a lot of random noise, however if we consider the main "channel" (the thick central pool of lines) you do really see both a bump up in the negative y value and a peak in the positive y value this suggests that there is a real signal being seen there - there is a peak at 248ms. You do have higher individual peaks past this point, however these are noise as the main channel does not reflect those higher values.
 
 2) Now load `pas_vector.npy` (call it `y`). PAS is the same as in Assignment 2, describing the clarity of the subjective experience the subject reported after seeing the briefly presented stimulus  
   i. Which dimension in the `data` array does it have the same length as? 
-```{r}
+```{python}
+y = np.load('pas_vector.npy')
 len(y)
-## Answer: It has the same length as the repetitions dimension.
 ```
+## Answer: It has the same length as the repetitions dimension.
+
   ii. Now make four averages (As in Exercise 1.1.iii), one for each PAS rating, and plot the four time courses (one for each PAS rating) for the sensor found in Exercise ~~1.1.v~~  1.1.vi
-```{r}
+```{python}
 ## We want to group by the values in the y vector and create plots for averages along the 4 pas values. This is all supposed to be for sensor 74, so we can first take just the 2d array of values for the repetitions and timesteps on just sensor 74. We can then take our grouping vector - y, and pull both the 2d matrix and y into a dataframe. Then use pandas commands to group and mean them.
 
 sens74 = data[0:len(data),73,]
@@ -170,18 +183,16 @@ plt.plot(times,pasmeans.iloc[2])
 plt.plot(times,pasmeans.iloc[3])
 ```
   
-  iii. Notice that there are two early peaks (measuring visual activity from the brain), one before 200 ms and one around 250 ms. Describe how the amplitudes of responses are related to the four PAS-scores. Does PAS 2 behave differently than expected?  
-```{r}
-## Answer: Commenting on the 2 peaks (before 200 and after 250) and the behavior of PAS2
+  iii. Notice that there are two early peaks (measuring visual activity from the brain), one before 200 ms and one around 250 ms. Describe how the amplitudes of responses are related to the four PAS-scores. Does PAS 2 behave differently than expected? 
+## Answer: Commenting on the 2 peaks (before 200 and after 250) and the behavior of PAS2.
 
 ## Generally the peaks seem to follow a trend of increasing amplitude with increasing pas score; however, PAS2 showed the greatest amplitude in its peaks - particularly the second peak - when compared to all of the others, which may call that initial interpretation into question.
-```
-  
+
 # Exercise 2: Do logistic regression to classify pairs of PAS-ratings.
 
 1) Now, we are going to do Logistic Regression with the aim of classifying the PAS-rating given by the subject  
   i. We'll start with a binary problem - create a new array called `data_1_2` that only contains PAS responses 1 and 2. Similarly, create a `y_1_2` for the target vector  
-```{r}
+```{python}
 ## We'll start with a binary problem - create a new array called `data_1_2` that only contains PAS responses 1 and 2. Similarly, create a `y_1_2` for the target vector. 
 
 y_1_2 = y[y<3]
@@ -189,7 +200,7 @@ data_1_2 = data[y<3]
 ```
   
   ii. Scikit-learn expects our observations (`data_1_2`) to be in a 2d-array, which has samples (repetitions) on dimension 1 and features (predictor variables) on dimension 2. Our `data_1_2` is a three-dimensional array. Our strategy will be to collapse our two last dimensions (sensors and time) into one dimension, while keeping the first dimension as it is (repetitions). Use `np.reshape` to create a variable `X_1_2` that fulfils these criteria.
-```{r}
+```{python}
 ## We need to create a variable X_1_2 which collapses sensors and time into one dimension, but keeps reps will use np.reshape for this. 
 data_1_2.shape
 
@@ -197,49 +208,47 @@ X_1_2 = data_1_2.reshape(214, 102*251)
 
 X_1_2.shape
 
-## looks correct now.
+## Looks correct now.
 ```
   
   iii. Import the `StandardScaler` and scale `X_1_2`  
-```{r}
+```{python}
 ## Now want to scale X_1_2 import sklearn from sklearn.preprocessing import StandardScaler.
-
+from sklearn.preprocessing import StandardScaler
 scaler = StandardScaler()
 
 X_1_2 = scaler.fit_transform(X_1_2)
 ```
   
   iv. Do a standard `LogisticRegression` - can be imported from `sklearn.linear_model` - make sure there is no `penalty` applied 
-```{r}
+```{python}
 ## We want to do a logistic regression from sklearn.linear_model applying no penalty from sklearn.linear_model import LogisticRegression.
-
+from sklearn.linear_model import LogisticRegression
 logreg = LogisticRegression(penalty = 'none').fit(X_1_2, y_1_2)
 ```
   
   v. Use the `score` method of `LogisticRegression` to find out how many labels were classified correctly. Are we overfitting? Besides the score, what would make you suspect that we are overfitting?
-```{r}
+```{python}
 ## We use core to find out how many were classified correctly.
 logreg.predict(X_1_2)
 logreg.score(X_1_2, y_1_2)
 logreg.coef_
 pd.value_counts((logreg.coef_ != 0)[0])
-
-## Answer: The score is perfect, meaning all objects were correctly classified as either PAS 1 or PAS 2, this suggests that the model is overfitting. Besides the score, the coefficients all being nonzero could suggest overfitting. The best way to know would be testing on validation set and seeing how much the accuracy drops.
 ```
-  
+## Answer: The score is perfect, meaning all objects were correctly classified as either PAS 1 or PAS 2, this suggests that the model is overfitting. Besides the score, the coefficients all being nonzero could suggest overfitting. The best way to know would be testing on validation set and seeing how much the accuracy drops.
+
   vi. Now apply the _L1_ penalty instead - how many of the coefficients (`.coef_`) are non-zero after this?
-```{r}
+```{python}
 ## Now we apply the L1 penalty and check how many coefficients are nonzero.
 logreg_L1 = LogisticRegression(penalty = 'l1', solver = 'liblinear').fit(X_1_2, y_1_2)
 logreg_L1.coef_
 nonzero = logreg_L1.coef_ != 0
 pd.value_counts(nonzero[0])
-
-## Now only 284 coefficients have nonzero values.
 ```
-  
+## Answer: Now only 284 coefficients have nonzero values.
+
   vii. Create a new reduced $X$ that only includes the non-zero coefficients - show the covariance of the non-zero features (two covariance matrices can be made; $X_{reduced}X_{reduced}^T$ or $X_{reduced}^TX_{reduced}$ (you choose the right one)) . Plot the covariance of the features using `plt.imshow`. Compared to the plot from 1.1.iii, do we see less covariance?  
-```{r}
+```{python}
 X_1_2_nz = X_1_2[:,nonzero[0]]
 
 covmat = np.asmatrix(np.transpose(X_1_2_nz))*np.asmatrix(X_1_2_nz)
@@ -248,19 +257,18 @@ covmat_image = plt.imshow(covmat, cmap = 'seismic', vmax = 200, vmin = -200)
 plt.colorbar(covmat_image)
 covariance_image = plt.imshow(covmatrix, cmap = 'seismic', vmax = 5e-23, vmin = -5e-23)
 plt.colorbar(covariance_image)
-
-## It's a little tough to tell, but yes I think there is less covariance in the new image. Notably, we don't see the covariance patterns along the x and y axis. 
 ```
-  
+## Answer: It's a little tough to tell, but yes I think there is less covariance in the new image. Notably, we don't see the covariance patterns along the x and y axis.  
+
 2) Now, we are going to build better (more predictive) models by using cross-validation as an outcome measure    
   i. Import `cross_val_score` and `StratifiedKFold` from `sklearn.model_selection` 
-```{r}
+```{python}
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedKFold
 ```
 
   ii. To make sure that our training data sets are not biased to one target (PAS) or the other, create `y_1_2_equal`, which should have an equal number of each target. Create a similar `X_1_2_equal`. The function `equalize_targets_binary` in the code chunk associated with Exercise 2.2.ii can be used. Remember to scale `X_1_2_equal`! 
-```{r}
+```{python}
 def equalize_targets_binary(data, y):
     np.random.seed(7)
     targets = np.unique(y) ## find the number of targets
@@ -295,8 +303,7 @@ X_1_2_e = scaler.fit_transform(X_1_2_e)
 ```
 
   iii. Do cross-validation with 5 stratified folds doing standard `LogisticRegression` (See Exercise 2.1.iv) 
-```{r}
-LogisticRegression().fit(X_1_2_e, )
+```{python}
 
 lr = LogisticRegression(penalty = 'none')
 
@@ -310,12 +317,11 @@ for train_index, test_index in folds.split(X_1_2_e ,y_1_2_e ):
 
 np.max(acc_stratified)
 np.mean(acc_stratified)
-
-## Maximum accuracy of .625 and mean accuracy of .54.
 ```
+## Answer: Maximum accuracy of .625 and mean accuracy of .54.
 
   iv. Do L2-regularisation with the following `Cs=  [1e5, 1e1, 1e-5]`. Use the same kind of cross-validation as in Exercise 2.2.iii. In the best-scoring of these models, how many more/fewer predictions are correct (on average)?  
-```{r}
+```{python}
 ## c = 1e5.
 lr = LogisticRegression(penalty = 'l2', C = 10000)
 
@@ -363,12 +369,11 @@ np.mean(acc_stratified)
 ## Accuracy of 0.596, this one has the best accuracy.
 
 (.596-.535)*len(y_1_2_e)
-
-## On average it predicts 12 more correctly than the least accurate C value.
 ```
+## Answer: On average it predicts 12 more correctly than the least accurate C value.
 
   v. Instead of fitting a model on all `n_sensors * n_samples` features, fit  a logistic regression (same kind as in Exercise 2.2.iv (use the `C` that resulted in the best prediction)) for __each__ time sample and use the same cross-validation as in Exercise 2.2.iii. What are the time points where classification is best? Make a plot with time on the x-axis and classification score on the y-axis with a horizontal line at the chance level (what is the chance level for this analysis?) 
-```{r}
+```{python}
 from sklearn.model_selection import cross_val_score
     
 lr = LogisticRegression(penalty = 'l2', C = .00001)
@@ -401,15 +406,13 @@ for i in range(0,251):
 plt.plot(times, accs2)
 plt.axhline(.5, color = 'red')
 times[np.argmax(accs2)]
-
-## This method yields a much "spikier" plot, but still shows the same peak at a time just a bit past 200ms( around 224ms), sticking to the first method going forward.
-
-## The chance level for this analysis is 50% or .5, because we equalized the data. 
-## So you have a 50/50 chance of picking either 1 or 2 correctly at random. 
 ```
+## Answer: This method yields a much "spikier" plot, but still shows the same peak at a time just a bit past 200ms( around 224ms), sticking to the first method going forward.
+
+## The chance level for this analysis is 50% or .5, because we equalized the data. So you have a 50/50 chance of picking either 1 or 2 correctly at random. 
 
   vi. Now do the same, but with L1 regression - set `C=1e-1` - what are the time points when classification is best? (make a plot)?
-```{r}
+```{python}
 lr = LogisticRegression(penalty = 'l1', C = 1e-1, solver = 'liblinear')
 folds = StratifiedKFold(n_splits = 5)
 acc_stratified = []
@@ -427,12 +430,11 @@ plt.plot(times, accs3)
 plt.axhline(.5, color = 'red')
 times[np.argmax(accs3)]
 max(accs3)
-
-## Similarly finds that those time points around 244 have the best classification. However, this time the maximum accuracy is .672, a big improvement.
 ```
+## Answer: Similarly finds that those time points around 244 have the best classification. However, this time the maximum accuracy is .672, a big improvement.
 
   vii. Finally, fit the same models as in Exercise 2.2.vi but now for `data_1_4` and `y_1_4` (create a data set and a target vector that only contains PAS responses 1 and 4). What are the time points when classification is best? Make a plot with time on the x-axis and classification score on the y-axis with a horizontal line at the chance level (what is the chance level for this analysis?)  
-```{r}
+```{python}
 y_1_4 = y[(y==1)|(y == 4)]
 data_1_4 = data[(y==1)|(y == 4)]
 
@@ -459,22 +461,19 @@ plt.axhline(.5, color = 'red')
 times[np.argmax(accs4)]
 times[np.array(accs4)>.64]
 max(accs4)
-
-## The chance level for this analysis is .5 because the data was equalized, meaning if you picked from the data randomly you would pick 50% pas 1 and 50% pas 4.
-
-## Classification was best at t = 236ms, but was also very effective at -72ms. This might suggest a difference in preparation between pas 1 and pas 4 cases on the part of the participant. 
 ```
+## Answer: The chance level for this analysis is .5 because the data was equalized, meaning if you picked from the data randomly you would pick 50% PAS 1 and 50% PAS 4.
 
-3) Is pairwise classification of subjective experience possible? Any surprises in the classification accuracies, i.e. how does the classification score fore PAS 1 vs 4 compare to the classification score for PAS 1 vs 2?  
-```{r}
-#Answer: Yes, the pairwise classification is possible, as our fairly simple logistic regression models allowed for us to find a distinction with an accuracy of between .14 and .17 greater than the chance line. In pas 1 vs pas 4, you see a second peak accuracy at -72ms, which was somewhat unexpected and might suggest some difference in subject mental preparation before seeing the stimulus. The score was surprisingly a little higher between pas 1 and 2 than between pas 1 and 4, which was also interesting since subjectively 4 is supposed to be a more extreme difference from pas 1 than 2. 
-```
+## Classification was best at t = 236ms, but was also very effective at -72ms. This might suggest a difference in preparation between PAS 1 and PAS 4 cases on the part of the participant.
+
+3) Is pairwise classification of subjective experience possible? Any surprises in the classification accuracies, i.e. how does the classification score fore PAS 1 vs 4 compare to the classification score for PAS 1 vs 2?
+## Answer: Yes, the pairwise classification is possible, as our fairly simple logistic regression models allowed for us to find a distinction with an accuracy of between .14 and .17 greater than the chance line. In PAS 1 vs PAS 4, you see a second peak accuracy at -72ms, which was somewhat unexpected and might suggest some difference in subject mental preparation before seeing the stimulus. The score was surprisingly a little higher between PAS 1 and 2 than between PAS 1 and 4, which was also interesting since subjectively 4 is supposed to be a more extreme difference from PAS 1 than 2. 
 
 # Exercise 3: Do a Support Vector Machine Classification on all four PAS-ratings.  
 
 1) Do a Support Vector Machine Classification  
   i. First equalize the number of targets using the function associated with each PAS-rating using the function associated with Exercise 3.1.i  
-```{r}
+```{python}
 def equalize_targets(data, y):
     np.random.seed(7)
     targets = np.unique(y)
@@ -503,7 +502,7 @@ y_e = equalized_full[1]
 ```
   
   ii. Run two classifiers, one with a linear kernel and one with a radial basis (other options should be left at their defaults) - the number of features is the number of sensors multiplied the number of samples. Which one is better predicting the category?
-```{r}
+```{python}
 data_re_e = data_e.reshape(396, 102*251)
 data_re_e_s = scaler.fit_transform(data_re_e)
 
@@ -550,12 +549,11 @@ for train_index, test_index in folds.split(data_re_e_s, y_e):
     acc_stratified.append(svc_r.score(x_test_fold, y_test_fold))
     accs6.append(np.mean(acc_stratified))
 np.mean(accs6)
-
-## This method was slightly better than the first, with an accuracy of ~32%.
 ```
-  
+## Answer: This method was slightly better than the first, with an accuracy of ~32%.
+
   iii. Run the sample-by-sample analysis (similar to Exercise 2.2.v) with the best kernel (from Exercise 3.1.ii). Make a plot with time on the x-axis and classification score on the y-axis with a horizontal line at the chance level (what is the chance level for this analysis?)
-```{r}
+```{python}
 folds = StratifiedKFold(n_splits = 5)
 svc_r = svm.SVC(kernel = 'rbf')
 accs7 = []
@@ -573,28 +571,38 @@ plt.axhline(.25, color = 'red')
 times[np.argmax(accs7)]
 times[np.array(accs7) > .33]
 max(accs7)
-
-# The chance level for this analysis is .25 because there are 4 possible outcomes and we equalized them at the start, so 25% PAS1, 25% PAS2, etc. 
 ```
-  
+## Answer: The chance level for this analysis is .25 because there are 4 possible outcomes and we equalized them at the start, so 25% PAS1, 25% PAS2, etc. 
+
   iv. Is classification of subjective experience possible at around 200-250 ms?
-```{r}
+```{python}
 times[np.array(accs7) > .33]
 np.array(accs7)[times == 232]
-
-## Answer: Yes, classification of subjective experience is (somewhat) possible within this range; however the highest peak is at time 704ms. Within the 200-250 range the highest accuracy is 33.6%, which is (.336-.25)/.25 = 34% more accurate than randomly guessing. 
 ```
+## Answer: Yes, classification of subjective experience is (somewhat) possible within this range; however the highest peak is at time 704ms. Within the 200-250 range the highest accuracy is 33.6%, which is (.336-.25)/.25 = 34% more accurate than randomly guessing. 
 
 2) Finally, split the equalized data set (with all four ratings) into a training part and test part, where the test part if 30 % of the trials. Use `train_test_split` from `sklearn.model_selection`  
   i. Use the kernel that resulted in the best classification in Exercise 3.1.ii and `fit`the training set and `predict` on the test set. This time your features are the number of sensors multiplied by the number of samples.  
-```{r}
+  
+```{python}
+
+```
+  
+  
+```{python}
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(data_re_e_s, y_e,
+                                                    test_size=0.30)
+
+
 svc_r = svm.SVC(kernel = 'rbf')
 svc_r.fit(X_train, y_train)
 preds = svc_r.predict(X_test)
 ```
 
   ii. Create a _confusion matrix_. It is a 4x4 matrix. The row names and the column names are the PAS-scores. There will thus be 16 entries. The PAS1xPAS1 entry will be the number of actual PAS1, $y_{pas1}$ that were predicted as PAS1, $\hat y_{pas1}$. The PAS1xPAS2 entry will be the number of actual PAS1, $y_{pas1}$ that were predicted as PAS2, $\hat y_{pas2}$ and so on for the remaining 14 entries.  Plot the matrix
-```{r}
+```{python}
 np.mean(preds[y_test == 4]==3)
 confmat = np.matrix(np.zeros(shape = (4,4)))
 for i in range(1,5):
@@ -622,6 +630,4 @@ fig.colorbar(confmat_image)
 ```
 
   iii. Based on the confusion matrix, describe how ratings are misclassified and if that makes sense given that ratings should measure the strength/quality of the subjective experience. Is the classifier biased towards specific ratings?  
-```{r}
-## PAS ratings are regularly being misclassified as PAS 3, this may suggest that people are biased towards subjectively saying they had a PAS 3 level of experience. Whatever the cause, this is leading the classifier to be biased towards PAS 3. Only in the cases of PAS 3 and PAS 4 is the classification better than chance. 
-```
+## Answer: PAS ratings are regularly being misclassified as PAS 3, this may suggest that people are biased towards subjectively saying they had a PAS 3 level of experience. Whatever the cause, this is leading the classifier to be biased towards PAS 3. Only in the cases of PAS 3 and PAS 4 is the classification better than chance.
