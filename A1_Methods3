@@ -1,10 +1,10 @@
 ---
 title: "Methods 3 - Assignment 1"
 author: "Esteban David Maidana"
-date: "09/02/2022"
+date: "09/08/2022"
 output:
-  word_document: default
   pdf_document: default
+  word_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -16,6 +16,9 @@ knitr::opts_chunk$set(echo = TRUE)
 ## install.packages("dplyr") ##Installed
 ## install.packages("ggplot2") ##Installed
 ## install.packages("skimr") ##Installed
+## install.packages("XQuartz") ##Installed
+## install.packages("fastmap") ##Installed
+## install.packages('knitr', repos='http://cran.rstudio.org') ##Installed
 
 ## Required libraries
 library(rethinking) ##Loaded
@@ -65,52 +68,59 @@ The objectives of the exercises of this assignment are:
 1) Describe the dataset, such that someone who happened upon this dataset could understand the variables and what they contain  
   i. Also consider whether any of the variables in _politeness_ should be encoded as factors or have the factor encoding removed. Hint: ```?factor```
 ```{r}
-## View contents of the defined object via the view function.
-view(politeness)
-
-## Access a broad overview of the defined object.
-skim(politeness)
+politeness[1:4] = lapply(politeness[1:4], factor)
 ```
 ## Answer: Defaults to encoding subject, gender, attitude as characters and the rest as numeric. We should encode subject, gender, scenario, and attitude as factors.
 
-```{r}
-politeness[1:4] = lapply(politeness[1:4], factor)
-```
 ## There are several variables here, subject appears to be an ID variable for each subject, gender is M or F, scenario presumably refers to different testing conditions, attitude seems to have the options polite or informal. Duration is duration in some unit, the others are unclear.
 
 2) Create a new data frame that just contains the subject _F1_ and run two linear models; one that expresses _f0mn_ as dependent on _scenario_ as an integer; and one that expresses _f0mn_ as dependent on _scenario_ encoded as a factor  
   i. Include the model matrices, $X$ from the General Linear Model, for these two models in your report and describe the different interpretations of _scenario_ that these entail
-  ii. Which coding of _scenario_, as a factor or not, is more fitting? You want to code it as a factor, presumably, since it's a category of scenario. 
+  ii. Which coding of _scenario_, as a factor or not, is more fitting? You want to code it as a factor, presumably, since it's a category of scenario.
 ```{r}
 ## Creating new data frame that has just the subject F1.
 politeness_f1 <- politeness %>%
   filter(subject == 'F1')
 
 ## Factor version of linear model.
-f1lm_factor <- lm(f0mn~factor(scenario),data = politeness_f1)
-f1lm_int <- lm(f0mn~as.integer(scenario),data = politeness_f1)
+f1lm_factor <- glm(f0mn~factor(scenario),data = politeness_f1)
+f1lm_int <- glm(f0mn~as.integer(scenario),data = politeness_f1)
 
 ## Model matrices.
 fact_matrix <- model.matrix(f1lm_factor)
 int_matrix <- model.matrix(f1lm_int)
+
+fact_matrix
+int_matrix
 ```
-## Answer: We can see one was just treated as a set of integers while the factor was broken into a bunch of dummy variables.
+## Answer: For the factor matrix, it treats "scenario" as a series of binary dummy variables, taking the 7 levels and breaking that down into 6 separate dummy variables. For the integer matrix, it instead treats "scenario" as an integer ranking from 1 to 7, this being a single variable which indicates which of the 7 scenarios was utilized. The implication of the integer version is that it would have some ordinality (an order to it, where e.g. scenario 7 was "greater" in some way than scenario 1) where with the factor version each scenario is treated equally. In a linear regression model, the effect this has is that for the integer version, there is a signle slope (beta) assigned to all of the scenarios, where in the factor version there is a different beta value for each scenario, which essentially shows up in the model as a shifting of the y-intercept calculated independently for each value for "scenario".
 
 3) Make a plot that includes a subplot for each subject that has _scenario_ on the x-axis and _f0mn_ on the y-axis and where points are colour coded according to _attitude_
-  i. Describe the differences between subjects
+  i. Describe the differences between subjects:
 ```{r}
-## Plot
 ggplot(drop_na(politeness), aes(as.integer(scenario), f0mn, color = attitude))+
   geom_point()+
   geom_line()+
   labs(x='Scenario', y = 'f0mn')+
+  theme_bw()+
   facet_wrap(~subject)
-
-## ggplot(drop_na(politeness), aes(as.integer(scenario), f0mn, color = attitude))+
-##   geom_point()+
-##   geom_smooth(method = 'lm', se = F)+
-##   labs(x='Scenario', y = 'f0mn')
 ```
+## Answer: There are multiple major differences between subjects - notably, different subjects experience different shifts in f0mn based on different scenarios. There is not a noticeable, consistent trend across subjects in how their f0mn levels respond to various scenarios. Furthermore, each subject has a different baseline f0mn. Some subjects have a mean f0mn in the low 100's, where others are in the upper 200's, to highlight this difference I've made a summary plot below.
+
+```{r}
+politeness %>%
+  drop_na %>%
+  select(f0mn, scenario, attitude, subject)%>%
+  group_by(subject, attitude)%>%
+  summarise(f0mn_dev = sd(f0mn),f0mn = mean(f0mn))%>%
+  ggplot(aes(x= subject, fill = attitude, y = f0mn))+
+  geom_col(position = "dodge")+
+  #errorbars look ugly, but do confirm statistically significant difference
+  #geom_errorbar(aes(ymin = f0mn-f0mn_dev, ymax = f0mn+f0mn_dev))+
+  theme_bw()
+```
+## Answer: Clearly there is a significant difference between the average f0mn for different subjects, which should be accounted for if looking for a treatment effect. 
+    
 ## Exercise 2: Comparison of models.
 
 For this part, make sure to have `lme4` installed.  
@@ -126,94 +136,107 @@ library(lme4) ##Loaded
 1) Build four models and do some comparisons
   i. a single level model that models _f0mn_ as dependent on _gender_
 ```{r}
-## Single level model.
-single <- lmer(f0mn ~ (1|gender), data = politeness)
+single <- lm(f0mn ~ gender, data = politeness)
 ```
-    
+
   ii. a two-level model that adds a second level on top of i. where unique intercepts are modelled for each _scenario_
 ```{r}
-## Two-level model that models intercepts for _scenario_.
 scenario_twolvl <- lmer(f0mn ~ gender + (1|scenario), data = politeness)
 ```
-  
-  iii. a two-level model that only has _subject_ as an intercept 
+
+  iii. a two-level model that only has _subject_ as an intercept
 ```{r}
-## Two-level model that only has _subject_ as an intercept.
 subject_twolvl <- lmer(f0mn ~ gender + (1|subject), data = politeness)
 ```
-  
+
   iv. a two-level model that models intercepts for both _scenario_ and _subject_
 ```{r}
-## Two-level model that models intercepts for both _subject_ and _scenario_.
 both_twolvl <- lmer(f0mn ~ gender + (1|subject) + (1|scenario), data = politeness)
 ```
   
   v. which of the models has the lowest residual standard deviation, also compare the Akaike Information Criterion `AIC`?
-## Answer: Lowest residual standard deviation is the one that includes  both _subject_ and _scenario_.  
-
+## Answer: To check for residual standard deviation, we can run summary on each of these models 
 ```{r}
-## Akaike Information Criterion 'AIC'
-AIC(single)
-AIC(scenario_twolvl)
-AIC(subject_twolvl)
-AIC(both_twolvl)
+summary(single)
+##RSD = 39.46
+summary(scenario_twolvl)
+##RSD = 38.448
+summary(subject_twolvl)
+##RSD = 32.04
+summary(both_twolvl)
+##RSD = 30.658
 ```
-## Answer: Lowest is the one that includes both.
 
-## Comment: stepAIC function would go through all the variables stepwise and add/remove them from a model to find the optimal model.
+## Answer: The model with the lowest residual standard deviation is the two-level model which includes both _subject_ and _scenario_. 
+```{r}
+AIC(single)
+##2163.97
+AIC(scenario_twolvl)
+##2152.31
+AIC(subject_twolvl)
+##2099.63
+AIC(both_twolvl)
+##2092.48
+
+## Answer: Lowest AIC in the model that includes both second-level effects.
+```
+## Answer: The lowest AIC is found in the model which includes gender and both subject and scenario. Ideally we want the lowest possible AIC value, so we would include gender as a first-level effect, and subject and scenario as second-level effect variables in our model. The variable which reduces AIC most with its inclusion is subject. 
 
   vi. which of the second-level effects explains the most variance?
-## Answer: Subject describes the most variance, as can be seen by it's impact on AIC relative to scenario. 
-
+## Answer: The second-level effect of "subject" describes the most variance, as can be seen by its impact on AIC relative to scenario as well as the reduction of RSD that occurs after its inclusion relative to that of scenario. 
+    
 2) Why is our single-level model bad?
-## Answer: Our single level model is too simple, only including gender and not accounting for the subject level differences or the scenario differences.
+## Answer: Our single level model is too simple, only including gender and not accounting for the subject level differences or the scenario differences. The single level model only assumes that there will be a flat difference between f0mn and 
 
   i. create a new data frame that has three variables, _subject_, _gender_ and _f0mn_, where _f0mn_ is the average of all responses of each subject, i.e. averaging across _attitude_ and_scenario_
 ```{r}
-## New data frame. 
 subgen_politeness <- politeness %>%
   group_by(subject, gender) %>%
   summarize(f0mn = mean(f0mn, na.rm = TRUE))
 
 subgen_politeness
 ```
+
   ii. build a single-level model that models _f0mn_ as dependent on _gender_ using this new dataset
 ```{r}
-## Single-level model.
-single_summary <-lmer(f0mn ~ (1|gender), data = subgen_politeness)
+single_summary <-lm(f0mn ~ gender, data = subgen_politeness)
 ```
-  
+
   iii. make Quantile-Quantile plots, comparing theoretical quantiles to the sample quantiles) using `qqnorm` and `qqline` for the new single-level model and compare it to the old single-level model (from 1).i). Which model's residuals ($\epsilon$) fulfil the assumptions of the General Linear Model better?)
-    
 ## General linear model assumptions:
 ## - The data are independently distributed.
-## - The dependent variable does not need to be normally distrubuted, but it needs to follow some kind of exponential distribution (binomial, poisson, multinomial, normal...).
+## - Normal residuals.
+## - Homoscedasticity
+
 ```{r}
-## QQ plot of our new lmer model
+##qq plot of our new lm model
 qqnorm(resid(single_summary))
 qqline(resid(single_summary))
 
-## QQ plot of our old lmer model.
+##hist(resid(single_summary))
+
+##qq plot of our old lm model
 qqnorm(resid(single))
 qqline(resid(single))
 
-## QQ plots of our data sets. 
-qqnorm(subgen_politeness$f0mn)
-qqline(subgen_politeness$f0mn)
-
-qqnorm(politeness$f0mn)
-qqline(politeness$f0mn)
+##hist(resid(single))
 ```
+## Answer: The new model that is operating on summary data does appear to do a better job of meeting the assumptions of the general linear model, notably the reduction of the size of tails at the ends suggests that the data is less skewed in its summarized form. This means that normality of residuals has improved, and therefore the new model better satisfies the "normality of residuals" assumption.
+
   iv. Also make a quantile-quantile plot for the residuals of the  multilevel model with two intercepts. Does it look alright?
 ```{r}
-## QQ plot
 qqnorm(resid(both_twolvl))
 qqline(resid(both_twolvl))
+
+## Comment: This looks okay but could be better, with some tails at the end that deviate. Still it isn't bad.
 ```
+## Answer: Yes this looks alright, however it is notable that there are some fairly pronounced tails, particularly at the positive end, and therefore the distribution of residuals is right-skewed. This doesn't fully violate the assumption of normally-distributed residuals, but it could be better. 
 
 3) Plotting the two-intercepts model
   i. Create a plot for each subject, (similar to part 3 in Exercise 1), this time also indicating the fitted value for each of the subjects for each of the scenarios (hint use `fixef` to get the "grand effects" for each gender and `ranef` to get the subject- and scenario-specific effects)
 ```{r}
+library(data.table)
+library(nlme)
 fixef(both_twolvl)
 ranef(both_twolvl)
 
@@ -251,7 +274,7 @@ for (i in 1:nrow(subgender)) {
 
 scenarios = test4
 
-## This allowed me to right join them, by subject. 
+## This allowed me to right join them, by subject.
 combined <-right_join(subgender,scenarios, by = 'subject')
 combined <- rename(combined,subj.int = X.Intercept.)
 
@@ -272,6 +295,7 @@ ggplot(full, aes(scenario, predicted))+
 ```{r}
 att_gend_lmer <- lmer(f0mn ~ gender + attitude + (1|subject) + (1|scenario), data = politeness)
 ```
+  
   ii. make a separate model that besides the main effects of _attitude_ and _gender_ also include their interaction
 ```{r}
 att_gend_int_lmer <- lmer(f0mn ~ gender + attitude + attitude*gender + (1|subject) + (1|scenario), data = politeness)
@@ -279,24 +303,33 @@ att_gend_int_lmer <- lmer(f0mn ~ gender + attitude + attitude*gender + (1|subjec
 summary(att_gend_int_lmer)
 ```
   iii. describe what the interaction term in the model says about Korean men's pitch when they are polite relative to Korean women's pitch when they are polite (you don't have to judge whether it is interesting) 
-    
 ## Answer: This suggests that Korean men shift their pitch down by 5.5 units less relative to women when speaking politely.
 
 2) Compare the three models (1. gender as a main effect; 2. gender and attitude as main effects; 3. gender and attitude as main effects and the interaction between them. For all three models model unique intercepts for _subject_ and _scenario_) using residual variance, residual standard deviation and AIC. 
 ```{r}
 summary(both_twolvl)
-
+## resid var: 939.92  resid sd: 30.658 
 summary(att_gend_lmer)
-
+## resid var: 882.7    resid sd: 29.71 
 summary(att_gend_int_lmer)
+## resid var: 885.5    resid sd: 29.76 
 
 
 AIC(both_twolvl)
+## 2092.49
 AIC(att_gend_lmer)
+## 2077.13
 AIC(att_gend_int_lmer)
+## 2072.62
+
+summary_stats <- data.frame(model = c("main: gender", "main: gender + attitude", "main: gender + attitude, int: gender*attitude"),residual_variance = c(939.92,882.7,885.5), residual_sd = c(30.66, 29.71, 29.76), AIC = c(2092.49,2077.13,2072.62))
+
+print(summary_stats)
 ```
+## Answer: Judging off of AIC, the lowest AIC value is the largest model which includes both intercepts, attitude, gender, and their interaction. This is lower than that without the interaction by 5 units. Residual variance and standard deviation are very slightly higher for the model that includes the interaction, but both are still significantly lower than in the model which only included gender as a main effect. This decision is somewhat arbitrary, but given the slightly lower AIC and barely higher residual variance and standard deviation, I would select the model including the interaction effect. 
+
 3)  Choose the model that you think describe the data the best - and write a short report on the main findings based on this model. At least include the following:
-  i. describe what the dataset consists of 
+  i. describe what the dataset consists of
 ## Answer: 
 ## The dataset consists of 7 variables:
 ## - The subject's ID,
@@ -315,8 +348,8 @@ AIC(att_gend_int_lmer)
 
   iv. describe the variance components of the second level (if any)  
 ## Answer: There was a high degree of subject variance (expected) and a lower degree of scenario variance. There was still a fair amount of unexplained variance as noted by the variance of the residuals, some of which was explained by the main effects. Though this model is also not perfect, as can be seen by the Q-Q plot of the residuals below which has a tail.
-
-  v. include a Quantile-Quantile plot of your chosen model 
+  
+  v. include a Quantile-Quantile plot of your chosen model  
 ```{r}
 qqnorm(resid(att_gend_int_lmer))
 qqline(resid(att_gend_int_lmer))
