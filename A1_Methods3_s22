@@ -29,6 +29,7 @@ library(skimr) ##Loaded
 library(lme4) ##Loaded
 library(data.table) ##Loaded
 library(nlme) ##Loaded
+library(MASS) ## Loaded
 
 ## LOAD DATA
 ## Get working directory
@@ -36,11 +37,9 @@ setwd('/Users/estebandavidmaidana/Desktop')
 working_directory = getwd()
 ```
 ## Assignment 1: Using mixed effects modelling to model hierarchical data (Winter & Grawunder, 2012). 
-
 In this assignment we will be investigating the _politeness_ dataset of Winter and Grawunder (2012) and apply basic methods of multilevel modelling. 
 
 ## Dataset
-
 The dataset has been shared on GitHub, so make sure that the csv-file is on your current path. Otherwise you can supply the full path.
 ```{r}
 ## LOAD DATA
@@ -53,7 +52,6 @@ file = paste(working_directory, sep = "", "/working_directory/politeness.csv")
 politeness <- read.csv(file) ## Read in data
 ```
 ## Exercises and objectives:
-
 The objectives of the exercises of this assignment are:  
 1) Learning to recognize hierarchical structures within datasets and describing them  
 2) Creating simple multilevel models and assessing their fitness  
@@ -64,7 +62,6 @@ The objectives of the exercises of this assignment are:
 ## REMEMBER: This assignment will be part of your final portfolio.
 
 ## Exercise 1: Describing the dataset and making some initial plots.
-
 1) Describe the dataset, such that someone who happened upon this dataset could understand the variables and what they contain  
   i. Also consider whether any of the variables in _politeness_ should be encoded as factors or have the factor encoding removed. Hint: ```?factor```
 ```{r}
@@ -72,7 +69,7 @@ politeness[1:4] = lapply(politeness[1:4], factor)
 ```
 ## Answer: Defaults to encoding subject, gender, attitude as characters and the rest as numeric. We should encode subject, gender, scenario, and attitude as factors.
 
-## There are several variables here, subject appears to be an ID variable for each subject, gender is M or F, scenario presumably refers to different testing conditions, attitude seems to have the options polite or informal. Duration is duration in some unit, the others are unclear.
+## Answer: There are several variables here, subject appears to be an ID variable for each subject, gender is M or F, scenario presumably refers to different testing conditions, attitude seems to have the options polite or informal. Duration is duration in some unit, the others are unclear.
 
 2) Create a new data frame that just contains the subject _F1_ and run two linear models; one that expresses _f0mn_ as dependent on _scenario_ as an integer; and one that expresses _f0mn_ as dependent on _scenario_ encoded as a factor  
   i. Include the model matrices, $X$ from the General Linear Model, for these two models in your report and describe the different interpretations of _scenario_ that these entail
@@ -115,19 +112,18 @@ politeness %>%
   summarise(f0mn_dev = sd(f0mn),f0mn = mean(f0mn))%>%
   ggplot(aes(x= subject, fill = attitude, y = f0mn))+
   geom_col(position = "dodge")+
-  #errorbars look ugly, but do confirm statistically significant difference
-  #geom_errorbar(aes(ymin = f0mn-f0mn_dev, ymax = f0mn+f0mn_dev))+
-  theme_bw()
+  ## errorbars look ugly, but do confirm statistically significant difference
+  ## geom_errorbar(aes(ymin = f0mn-f0mn_dev, ymax = f0mn+f0mn_dev))+
+theme_bw()
 ```
 ## Answer: Clearly there is a significant difference between the average f0mn for different subjects, which should be accounted for if looking for a treatment effect. 
     
 ## Exercise 2: Comparison of models.
-
 For this part, make sure to have `lme4` installed.  
 You can install it using `install.packages("lme4")` and load it using `library(lme4)`  
 `lmer` is used for multilevel modelling
 ```{r, eval=FALSE}
-library(lme4) ##Loaded
+library(lme4) ## Loaded
 
 ## mixed.model <- lmer(formula=..., data=...)
 ## example.formula <- formula(dep.variable ~ first.level.variable + (1 | second.level.variable))
@@ -155,28 +151,28 @@ both_twolvl <- lmer(f0mn ~ gender + (1|subject) + (1|scenario), data = politenes
 ```
   
   v. which of the models has the lowest residual standard deviation, also compare the Akaike Information Criterion `AIC`?
-## Answer: To check for residual standard deviation, we can run summary on each of these models 
+## Comment: To check for residual standard deviation, we can run summary on each of these models 
 ```{r}
 summary(single)
-##RSD = 39.46
+## RSD = 39.46
 summary(scenario_twolvl)
-##RSD = 38.448
+## RSD = 38.448
 summary(subject_twolvl)
-##RSD = 32.04
+## RSD = 32.04
 summary(both_twolvl)
-##RSD = 30.658
+## RSD = 30.658
 ```
-
 ## Answer: The model with the lowest residual standard deviation is the two-level model which includes both _subject_ and _scenario_. 
+
 ```{r}
 AIC(single)
-##2163.97
+## 2163.97
 AIC(scenario_twolvl)
-##2152.31
+## 2152.31
 AIC(subject_twolvl)
-##2099.63
+## 2099.63
 AIC(both_twolvl)
-##2092.48
+## 2092.48
 
 ## Answer: Lowest AIC in the model that includes both second-level effects.
 ```
@@ -209,17 +205,17 @@ single_summary <-lm(f0mn ~ gender, data = subgen_politeness)
 ## - Homoscedasticity
 
 ```{r}
-##qq plot of our new lm model
+## qq plot of our new lm model
 qqnorm(resid(single_summary))
 qqline(resid(single_summary))
 
-##hist(resid(single_summary))
+## hist(resid(single_summary))
 
-##qq plot of our old lm model
+## qq plot of our old lm model
 qqnorm(resid(single))
 qqline(resid(single))
 
-##hist(resid(single))
+## hist(resid(single))
 ```
 ## Answer: The new model that is operating on summary data does appear to do a better job of meeting the assumptions of the general linear model, notably the reduction of the size of tails at the ends suggests that the data is less skewed in its summarized form. This means that normality of residuals has improved, and therefore the new model better satisfies the "normality of residuals" assumption.
 
@@ -235,8 +231,8 @@ qqline(resid(both_twolvl))
 3) Plotting the two-intercepts model
   i. Create a plot for each subject, (similar to part 3 in Exercise 1), this time also indicating the fitted value for each of the subjects for each of the scenarios (hint use `fixef` to get the "grand effects" for each gender and `ranef` to get the subject- and scenario-specific effects)
 ```{r}
-library(data.table)
-library(nlme)
+library(data.table) ## Loaded
+library(nlme) ## Loaded
 fixef(both_twolvl)
 ranef(both_twolvl)
 
@@ -289,7 +285,6 @@ ggplot(full, aes(scenario, predicted))+
   facet_wrap(~subject)
 ```
 ## Exercise 3: Now with attitude.
-
 1) Carry on with the model with the two unique intercepts fitted (_scenario_ and _subject_).
   i. now build a model that has _attitude_ as a main effect besides _gender_
 ```{r}
