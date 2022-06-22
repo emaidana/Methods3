@@ -107,7 +107,7 @@ ggplot(drop_na(politeness), aes(as.integer(scenario), f0mn, color = attitude))+
 ```{r}
 politeness %>%
   drop_na %>%
-  select(f0mn, scenario, attitude, subject)%>%
+  dplyr::select(f0mn, scenario, attitude, subject)%>%
   group_by(subject, attitude)%>%
   summarise(f0mn_dev = sd(f0mn),f0mn = mean(f0mn))%>%
   ggplot(aes(x= subject, fill = attitude, y = f0mn))+
