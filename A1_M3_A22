@@ -3,8 +3,8 @@ title: "Methods 3 - Assignment 1"
 author: "Esteban David Maidana"
 date: "09/08/2022"
 output:
-  pdf_document: default
   word_document: default
+  pdf_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -182,7 +182,7 @@ AIC(both_twolvl)
 ## Answer: The second-level effect of "subject" describes the most variance, as can be seen by its impact on AIC relative to scenario as well as the reduction of RSD that occurs after its inclusion relative to that of scenario. 
     
 2) Why is our single-level model bad?
-## Answer: Our single level model is too simple, only including gender and not accounting for the subject level differences or the scenario differences. The single level model only assumes that there will be a flat difference between f0mn and 
+## Answer: Our single level model is too simple, only including gender and not accounting for the subject level differences or the scenario differences. The single level model only assumes that there will be a flat difference in f0mn between male and female.  
 
   i. create a new data frame that has three variables, _subject_, _gender_ and _f0mn_, where _f0mn_ is the average of all responses of each subject, i.e. averaging across _attitude_ and_scenario_
 ```{r}
