@@ -1,7 +1,7 @@
 ---
 title: "Methods 3 - Assignment 3"
 author: "Esteban David Maidana"
-date: "09/02/2022"
+date: "09/08/2022"
 output:
   word_document: default
   pdf_document: default
@@ -553,7 +553,7 @@ np.mean(accs6)
 ## Answer: This method was slightly better than the first, with an accuracy of ~32%.
 
   iii. Run the sample-by-sample analysis (similar to Exercise 2.2.v) with the best kernel (from Exercise 3.1.ii). Make a plot with time on the x-axis and classification score on the y-axis with a horizontal line at the chance level (what is the chance level for this analysis?)
-```{python}
+```{python message=FALSE}
 folds = StratifiedKFold(n_splits = 5)
 svc_r = svm.SVC(kernel = 'rbf')
 accs7 = []
