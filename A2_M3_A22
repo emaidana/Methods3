@@ -3,8 +3,8 @@ title: "Methods 3 - Assignment 2"
 author: "Esteban David Maidana"
 date: "09/08/2022"
 output:
-  pdf_document: default
   word_document: default
+  pdf_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -41,7 +41,7 @@ Go to https://osf.io/ecxsj/files/ and download the files associated with Experim
 The data is associated with Experiment 2 of the article at the following DOI https://doi.org/10.1016/j.concog.2019.03.007
 
 1) Put the data from all subjects into a single data frame.
-```{r}
+```{r echo=TRUE,results='hide',message=FALSE,warning=FALSE}
 ## LOAD DATA
 ## Get working directory
 ## Reading in all of the data as one csv
@@ -53,7 +53,7 @@ temp <- list.files(pattern="*.csv") %>%
 
 2) Describe the data and construct extra variables from the existing variables:  
     i. add a variable to the data frame and call it _correct_ (have it be a _logical_ variable). Assign a 1 to each row where the subject indicated the correct answer and a 0 to each row where the subject indicated the incorrect answer (__Hint:__ the variable _obj.resp_ indicates whether the subject answered "even", _e_ or "odd", _o_, and the variable _target_type_ indicates what was actually presented.
-```{r}
+```{r echo=TRUE,results='hide'}
 temp2 <- temp %>%
   mutate(target.abb = ifelse(target.type == 'odd','o','e')) %>%
   mutate(correct = ifelse(obj.resp == target.abb, 1, 0))
@@ -61,7 +61,7 @@ temp2 <- temp %>%
    
    ii. describe what the following variables in the data frame contain, _trial.type_, _pas_, _trial_, _target.contrast_, _cue_, _task_, _target_type_, _rt.subj_, _rt.obj_, _obj.resp_, _subject_ and _correct_. (That means you can ignore the rest of the variables in your description). For each of them, indicate and argue for what `class` they should be classified into, e.g. _factor_, _numeric_ etc.  
 
-## Answer: 
+Answer: 
 ## trial.type: factor
 ## Whether the trial was an experiment or utilized staircase procedure the definition of the two types of procedures is as follows:
 ## In the experiment paradigm, the ascending and descending stimuli methods are alternated and then the thresholds are averaged.
@@ -154,7 +154,7 @@ staircase2 %>%
 ##   facet_wrap(~subject)
 
 ```
-## Answer: Testing alt method, note that since this facet wraps, we end up with a different log regression for each. Not what the question asked for so we ignore this, but it does allow use of geom_smooth in place of actually generating a GLM model.
+Answer: Testing alt method, note that since this facet wraps, we end up with a different log regression for each. Not what the question asked for so we ignore this, but it does allow use of geom_smooth in place of actually generating a GLM model.
 
   iv. on top of those plots, add the estimated functions (on the _target.contrast_ range from 0-1) for each subject based on partial pooling model (use `glmer` from the package `lme4`) where unique intercepts and slopes for _target.contrast_ are modelled for each _subject_
 ```{r}
@@ -176,7 +176,7 @@ ggplot(staircase3, aes(x = target.contrast, y = predicted.response))+
 ## Comment: Results fit the data better than before overall. They're capturing the dropoff near zero contrast much better.
 
   v. in your own words, describe how the partial pooling model allows for a better fit for each subject. 
-## Answer: By making use of partial pooling, we are able to account for the subject-level differences while also utilizing the overall trend in the data to generate a better fit. This is still not perfect, but as can be seen in the models above the partial pooling model does more closely map to the actual data, particularly by predicting "incorrectness" a little better (note the dip towards zero contrast that was less pronounced in the full pooling model). Note that we would not expect these predicted values to go to zero, as they are simply probabilities of a given outcome (a person being correct, in this case). If we wanted to test the predictive power of these two models, we would set a cutoff of something like 76% (due to the class imbalance between correct and incorrect answers), assigning all prediction probability values above .76 as having a value of "1" and all values below .76 as having a value of "0" and then doing a confusion matrix. 
+Answer: By making use of partial pooling, we are able to account for the subject-level differences while also utilizing the overall trend in the data to generate a better fit. This is still not perfect, but as can be seen in the models above the partial pooling model does more closely map to the actual data, particularly by predicting "incorrectness" a little better (note the dip towards zero contrast that was less pronounced in the full pooling model). Note that we would not expect these predicted values to go to zero, as they are simply probabilities of a given outcome (a person being correct, in this case). If we wanted to test the predictive power of these two models, we would set a cutoff of something like 76% (due to the class imbalance between correct and incorrect answers), assigning all prediction probability values above .76 as having a value of "1" and all values below .76 as having a value of "0" and then doing a confusion matrix. 
 
 ## Exercise 2:
 ## Now we __only__ look at the _experiment_ trials (_trial.type_)  
@@ -226,10 +226,10 @@ ggplot(data = foursubs3, mapping = aes(sample = resids))+
   theme_bw()+
   facet_wrap(~subject)
 ```
-## Answer: Overall, this log transformation seems to significantly reign in residuals and solves a lot of the problems with skew. We do now see a left-skewed tail in subject 3, so it's not exclusively an improvement. That being said, the right skew in subject 2 is significantly reduced. 
+Answer: Overall, this log transformation seems to significantly reign in residuals and solves a lot of the problems with skew. We do now see a left-skewed tail in subject 3, so it's not exclusively an improvement. That being said, the right skew in subject 2 is significantly reduced. 
 
 2) Now do a partial pooling model modelling objective response times as dependent on _task_? (set `REML=FALSE` in your `lmer`-specification)  
-## Answer: Creating a partial pooling model. Note that "correct", "pas", and "rt.obj" are all response variables (pas could arguably be a predictor, but it's the perceived level of clarity of the object by the subject, and therefore would never be collected until after the subject had already reacted, which makes it unusable in predicting reaction time ahead of the reaction). This leaves us with trial, cue, odd.digit, even.digit, target.contrast, target.frames (though this only has one value in the experiment mode, so cannot be used), and subject.
+Answer: Creating a partial pooling model. Note that "correct", "pas", and "rt.obj" are all response variables (pas could arguably be a predictor, but it's the perceived level of clarity of the object by the subject, and therefore would never be collected until after the subject had already reacted, which makes it unusable in predicting reaction time ahead of the reaction). This leaves us with trial, cue, odd.digit, even.digit, target.contrast, target.frames (though this only has one value in the experiment mode, so cannot be used), and subject.
 ```{r}
 ## Partial pooling model
 ## install.packages("MuMIn") ##Installed
@@ -278,13 +278,15 @@ exp_pp7 <- lmer(rt.obj ~ task + (1|subject)+ (1|cue) + (1|target.type) , data = 
 ```
   
   i. which would you include among your random effects and why? (support your choices with relevant measures, taking into account variance explained and number of parameters going into the modelling) 
-## Answer: I would include cue and subject in my random effects. This is based upon a mixed analysis of AIC and residual standard deviation. The AIC decreased with the subsequent addition of subject and cue as random effects, but then increased upon the addition of target.type, even.digit, odd.digit, or trial as a random effect. At the same time, the addition of target.type as a random effect only dropped the residual variance by .0017, a very small change for the addition of a variable. Therefore, the model consisting of cue and subject as random effects and task as a main effect was optimal. 
+
+Answer: I would include cue and subject in my random effects. This is based upon a mixed analysis of AIC and residual standard deviation. The AIC decreased with the subsequent addition of subject and cue as random effects, but then increased upon the addition of target.type, even.digit, odd.digit, or trial as a random effect. At the same time, the addition of target.type as a random effect only dropped the residual variance by .0017, a very small change for the addition of a variable. Therefore, the model consisting of cue and subject as random effects and task as a main effect was optimal. 
   
   ii. explain in your own words what your chosen models says about response times between the different tasks  
 ```{r}
 summary(exp_pp5)
 ```
-## Answer: For the task variable, this model says that response time started at a baseline of 1.12884 ms for a doubles task, decreased by .03130 units (ms) by a quadruplet task, and decreased by .159 ms when given a singles task. 
+
+Answer: For the task variable, this model says that response time started at a baseline of 1.12884 ms for a doubles task, decreased by .03130 units (ms) by a quadruplet task, and decreased by .159 ms when given a singles task. 
   
 3) Now add _pas_ and its interaction with _task_ to the fixed effects  
 ```{r}
@@ -294,7 +296,8 @@ exp_pp_max_int <- lmer(rt.obj ~ task + pas + pas*task + (1|subject) + (1|cue) + 
 ```
   
   i. how many types of group intercepts (random effects) can you add without ending up with convergence issues or singular fits?  
-## Answer: I'm only able to add 4 group intercepts without getting convergence issues or singularity, when I try to add any further variables in addition to subject, cue, trial,and target.type random effects, R gives a singular fit warning. 
+
+Answer: I'm only able to add 4 group intercepts without getting convergence issues or singularity, when I try to add any further variables in addition to subject, cue, trial,and target.type random effects, R gives a singular fit warning. 
 
   ii. create a model by adding random intercepts (without modelling slopes) that results in a singular fit - then use `print(VarCorr(<your.model>), comp='Variance')` to inspect the variance vector - explain why the fit is singular (Hint: read the first paragraph under details in the help for `isSingular`)
 ```{r}
@@ -302,10 +305,10 @@ exp_pp_singular <- lmer(rt.obj ~ task + pas + pas*task + (1|subject)+(1|cue)+(1|
 
 print(VarCorr(exp_pp_pas), comp = "Variance")
 ```
-## Answer: The target.type intercept has been estimated as roughly equal to zero, and when a dimension of a variance-covariance matrix is estimated as zero, this results in singularity. Practically speaking this means that the different levels for target type are not resulting in any change in intercept. Therefore this model is being evaluated as singular. 
+Answer: The target.type intercept has been estimated as roughly equal to zero, and when a dimension of a variance-covariance matrix is estimated as zero, this results in singularity. Practically speaking this means that the different levels for target type are not resulting in any change in intercept. Therefore this model is being evaluated as singular. 
 
   iii. in your own words - how could you explain why your model would result in a singular fit? 
-## Answer: My model would result in a singular fit because I've added enough random effects that all of the random-effect level variance is being explained by other random effects, this means that the additional "splitting" that can occur from adding one more is essentially nothing, as all of its capacity to explain variance has already been explained by other variables. This results in a intercept of 0, and therefore no difference between the different levels of that random effect (target.type in this case). This is a singular fit.
+Answer: My model would result in a singular fit because I've added enough random effects that all of the random-effect level variance is being explained by other random effects, this means that the additional "splitting" that can occur from adding one more is essentially nothing, as all of its capacity to explain variance has already been explained by other variables. This results in a intercept of 0, and therefore no difference between the different levels of that random effect (target.type in this case). This is a singular fit.
     
 ## Exercise 3:
 1) Initialise a new data frame, `data.count`. _count_ should indicate the number of times they categorized their experience as _pas_ 1-4 for each _task_. I.e. the data frame would have for subject 1: for task:singles, pas1 was used # times, pas2 was used # times, pas3 was used # times and pas4 was used # times. You would then do the same for task:pairs and task:quadruplet.
@@ -337,13 +340,13 @@ count_glm <- glmer(count ~ pas + task + pas*task + (0+pas|subject), data = data.
 ```
 
   i. which family should be used?  
-## Answer: Gaussian family should be used as we are utilizing count as our response variable, which is a continuous numeric value. 
+Answer: Gaussian family should be used as we are utilizing count as our response variable, which is a continuous numeric value. 
 
   ii. why is a slope for _pas_ not really being modelled?  
-## Answer: Slope is not really being modeled for pas because pas is a factor, not a numerical value. A true slope requires a numerical variable, and represents the linear relationship between that predictor and the response variable. For pas we are shifting the predicted value up and down based on whatever factor value is present, which is effectively similar to a slope, but not the same thing. It only accepts 1-4 as inputs,  and the model would not know what to do if we attempted to input a pas value of 5 or greater.
+Answer: Slope is not really being modeled for pas because pas is a factor, not a numerical value. A true slope requires a numerical variable, and represents the linear relationship between that predictor and the response variable. For pas we are shifting the predicted value up and down based on whatever factor value is present, which is effectively similar to a slope, but not the same thing. It only accepts 1-4 as inputs,  and the model would not know what to do if we attempted to input a pas value of 5 or greater.
 
   iii. if you get a convergence error, try another algorithm (the default is the _Nelder_Mead_) - try (_bobyqa_) for which the `dfoptim` package is needed. In `glmer`, you can add the following for the `control` argument: `glmerControl(optimizer="bobyqa")` (if you are interested, also have a look at the function `allFit`)
-## Answer: I did not get a convergence error, however here is the code for a model using the bobyqa algorithm.
+Answer: I did not get a convergence error, however here is the code for a model using the bobyqa algorithm.
 ```{r, results = "hide", eval = FALSE}
 
 ## count_glm_boby <- glmer(count ~ pas + task + pas*task + (pas|subject), data = data.count, family = 'gaussian', control = glmerControl(optimizer = 'bobyqa'))
@@ -368,13 +371,13 @@ summary(count_glm_noint)
 ```
 
   v. indicate which of the two models, you would choose and why  
-## Answer: The model which includes the interaction effect has a lower AIC, BIC, and RSD, and therefore is the model that I would select. All metrics agree that the model including the interaction effect is superior. 
+Answer: The model which includes the interaction effect has a lower AIC, BIC, and RSD, and therefore is the model that I would select. All metrics agree that the model including the interaction effect is superior. 
   
   vi. based on your chosen model - write a short report on what this says about the distribution of ratings as dependent on _pas_ and _task_  
 ```{r}
 summary(count_glm)
 ```
-## Answer: To summarise, the intercept of 66.552 contains pas1 and taskdoubles. The count of pas2 was 6.4 less on average, the count of pas 3 was 26.7 less on average, the count of pas4 was 26.1 less on average. The count of a quadruplet task was 8.1 greater on average, the count of a singles task was 13.7 less on average. Now looking at the interaction effects, the count of pas2 alongside a quadruplet task was 8.0 less on average, pas3 alongside a quadruplet task was 11.4 less on average, pas4 alongside quadruplet task was 12.0 less on average. For singles tasks, a single task alongside pas2 was 11.62 greater on average, alongside pas3 was 14.2 greater on average, and alongside pas4 was 31.8 greater on average. Note that the way you interpret this, is by summing up the intercept with any main effects as well as any relevant interaction effects. So for example, in a case that was pas2 and a quadruplet task, the count was estimated to be: 66.552 - 6.4 + 8.1 - 8.0 = 60.3. The rough relationship is that as pas increases, the count decreases and as task increases (single -> double -> quadruple) the count increases. 
+Answer: To summarise, the intercept of 66.552 contains pas1 and taskdoubles. The count of pas2 was 6.4 less on average, the count of pas 3 was 26.7 less on average, the count of pas4 was 26.1 less on average. The count of a quadruplet task was 8.1 greater on average, the count of a singles task was 13.7 less on average. Now looking at the interaction effects, the count of pas2 alongside a quadruplet task was 8.0 less on average, pas3 alongside a quadruplet task was 11.4 less on average, pas4 alongside quadruplet task was 12.0 less on average. For singles tasks, a single task alongside pas2 was 11.62 greater on average, alongside pas3 was 14.2 greater on average, and alongside pas4 was 31.8 greater on average. Note that the way you interpret this, is by summing up the intercept with any main effects as well as any relevant interaction effects. So for example, in a case that was pas2 and a quadruplet task, the count was estimated to be: 66.552 - 6.4 + 8.1 - 8.0 = 60.3. The rough relationship is that as pas increases, the count decreases and as task increases (single -> double -> quadruple) the count increases. 
 ```{r}
 ##                     Estimate Std. Error t value
 ## (Intercept)           66.552      7.347   9.059
@@ -418,7 +421,7 @@ library(ggpubr) ## Loaded
 
 ggarrange(actual, predicted, widths = c(1, 1.3))
 ```
-## Answer: I decided to also plot the actual count values for each, and this highlights that our model does a good job of correctly estimating the actual counts. The group of four plots on the left shows the actual count, and the group of four plots on the right shows the predicted counts. 
+Answer: I decided to also plot the actual count values for each, and this highlights that our model does a good job of correctly estimating the actual counts. The group of four plots on the left shows the actual count, and the group of four plots on the right shows the predicted counts. 
 
 3) Finally, fit a multilevel model that models _correct_ as dependent on _task_ with a unique intercept for each _subject_  
 ```{r}
@@ -442,7 +445,7 @@ accuracy = mean(predicted_correct == exp_only$correct)
 ## A confusion matrix may be more informative here. 
 confusionMatrix(factor(predicted_correct), factor(exp_only$correct))
 ```
-## Answer: This yields 60% accuracy, sensitivity of .65, and specificity of .59. That would suggest that this model is doing somewhat better than randomly assigning values. Notably, if we set our cutoff at .5 instead, what we get is near 1.0 sensitivity and near 0 specificity, and that would be because the model would prefer to classify all as correct (74.3% accuracy). So I would argue that our cutoff of .743 is more informative, despite the reduced sensitivity. 
+Answer: This yields 60% accuracy, sensitivity of .65, and specificity of .59. That would suggest that this model is doing somewhat better than randomly assigning values. Notably, if we set our cutoff at .5 instead, what we get is near 1.0 sensitivity and near 0 specificity, and that would be because the model would prefer to classify all as correct (74.3% accuracy). So I would argue that our cutoff of .743 is more informative, despite the reduced sensitivity. 
 
   ii. add _pas_ as a main effect on top of _task_ - what are the consequences of that?
 ```{r}
@@ -454,7 +457,7 @@ confusionMatrix(factor(predicted_correct), factor(exp_only$correct))
 AIC(correct_glm_pas)
 AIC(correct_glm)
 ```
-## Answer: Making the addition of pas improves accuracy, specificity, and sensitivity for the model. It also reduces AIC by about 1000, and therefore everything points to it being a good addition to the model. 
+Answer: Making the addition of pas improves accuracy, specificity, and sensitivity for the model. It also reduces AIC by about 1000, and therefore everything points to it being a good addition to the model. 
 
   iii. now fit a multilevel model that models _correct_ as dependent on _pas_ with a unique intercept for each _subject_
 ```{r}
@@ -467,7 +470,7 @@ AIC(correct_glm_pas_only)
 BIC(correct_glm_pas)
 BIC(correct_glm_pas_only)
 ```
-## Answer: Accuracy (.687), specificity (.662), and sensitivity (.757) are essentially the same as the version which includes task, and the AIC and BIC are slightly lower for this version which excludes task, therefore this is likely  a slightly superior model.
+Answer: Accuracy (.687), specificity (.662), and sensitivity (.757) are essentially the same as the version which includes task, and the AIC and BIC are slightly lower for this version which excludes task, therefore this is likely  a slightly superior model.
 
   iv. finally, fit a model that models the interaction between _task_ and _pas_  and their main effects  
 ```{r}
@@ -480,10 +483,10 @@ AIC(correct_glm_pas_task_int)
 BIC(correct_glm_pas_only)
 BIC(correct_glm_pas_task_int)
 ```
-## Answer: Again this version has very similar accuracy (.687), specificity (.662), and sensitivity (.7566) to the simpler version, as well as a higher AIC and BIC, so I would go with the simpler model that only includes pas and excludes task. 
+Answer: Again this version has very similar accuracy (.687), specificity (.662), and sensitivity (.7566) to the simpler version, as well as a higher AIC and BIC, so I would go with the simpler model that only includes pas and excludes task. 
   
   v. describe in your words which model is the best in explaining the variance in accuracy  
-## Answer: The best model is the one which only includes pas as a main effect and includes subject as a random effect. This is indicated by it having a near equal accuracy, specificity, and sensitivity to the more complex models, but also having a lower AIC and BIC than any model which includes task or the interaction of task and pas. 
+Answer: The best model is the one which only includes pas as a main effect and includes subject as a random effect. This is indicated by it having a near equal accuracy, specificity, and sensitivity to the more complex models, but also having a lower AIC and BIC than any model which includes task or the interaction of task and pas. 
 
 ## Assignment 2: Mixed effects modelling of response times, response counts, and accuracy (Andersen et al., 2019).
 
@@ -502,7 +505,7 @@ The objectives of the exercises of this assignment are based on: https://doi.org
 ## EXERCISE 4: Download and organise the data from experiment 1.
 Go to https://osf.io/ecxsj/files/ and download the files associated with Experiment 1 (there should be 29).  
 The data is associated with Experiment 1 of the article at the following DOI https://doi.org/10.1016/j.concog.2019.03.007  
-```{r}
+```{r echo=TRUE,results='hide',message=FALSE,warning=FALSE}
 ## Reading in all of the data as one .csv.
 setwd("/Users/estebandavidmaidana/Desktop/working_directory/experiment_1")
 
@@ -526,7 +529,7 @@ integers <- c('odd.digit', 'even.digit', 'correct', 'trial', 'target.frames')
 temp3[factors] <- lapply(temp3[factors], factor)
 temp3[integers] <- lapply(temp3[integers], as.integer)
 ```
-## Answer: Target frames are allowed to vary from 1 to 6 in this experiment where in part 1 they were held constant at 3 frames. Target contrast is held constant at 0.1 where in the previous part it was allowed to vary between .01 and 1. 
+Answer: Target frames are allowed to vary from 1 to 6 in this experiment where in part 1 they were held constant at 3 frames. Target contrast is held constant at 0.1 where in the previous part it was allowed to vary between .01 and 1. 
 
 ## EXERCISE 5: Use log-likelihood ratio tests to evaluate logistic regression models.
 
@@ -564,7 +567,7 @@ log_like <- function(prob, resp) {
 
 correct_prob <- data.frame(correct = temp3$correct, predicted = predict(pooled_correct, type = 'response'))
 
-correct_prob
+head(correct_prob)
 ```
 
   iii. apply both functions to the pooling model you just created. Make sure that the log-likelihood matches what is returned from the _logLik_ function for the pooled model. Does the likelihood-function return a value that is surprising? Why is the log-likelihood preferable when working with computers with limited precision?
@@ -574,7 +577,7 @@ log_like(correct_prob$predicted, correct_prob$correct)
 
 logLik(pooled_correct)
 ```
-## Answer: Our log likelihood function matches the _logLik_ function. The likelihood function returns a value of zero, which is clearly wrong. The issue with likelihood is that the computer predicted "1" and "0" for some of the probabilities, this is because there is limited precision, which causes the extremely small likelihood value to be rounded to zero. That's why log likelihood is preferable when woring with computers that have limited precision - it does not have this same weakness.  
+Answer: Our log likelihood function matches the _logLik_ function. The likelihood function returns a value of zero, which is clearly wrong. The issue with likelihood is that the computer predicted "1" and "0" for some of the probabilities, this is because there is limited precision, which causes the extremely small likelihood value to be rounded to zero. That's why log likelihood is preferable when woring with computers that have limited precision - it does not have this same weakness.  
 
   iv. now show that the log-likelihood is a little off when applied to the partial pooling model - (the likelihood function is different for the multilevel function - see section 2.1 of https://www.researchgate.net/profile/Douglas-Bates/publication/2753537_Computational_Methods_for_Multilevel_Modelling/links/00b4953b4108d73427000000/Computational-Methods-for-Multilevel-Modelling.pdf if you are interested)  
 ```{r}
@@ -584,7 +587,7 @@ logLik(pp_correct)
 
 ## Comment: Notably off by just a little bit.
 ```
-## Answer: The log likelihood function that we created is off by a little bit - about 60 units - likely due to our function not correctly accounting for degrees of freedom in the partial pooling model. 
+Answer: The log likelihood function that we created is off by a little bit - about 60 units - likely due to our function not correctly accounting for degrees of freedom in the partial pooling model. 
     
 2) Use log-likelihood ratio tests to argue for the addition of predictor variables, start from the null model, `glm(correct ~ 1, 'binomial', data)`, then add subject-level intercepts, then add a group-level effect of _target.frames_ and finally add subject-level slopes for _target.frames_. Also assess whether or not a correlation between the subject-level slopes and the subject-level intercepts should be included.
 ```{r}
@@ -650,9 +653,9 @@ BIC(model3)
 BIC(model4)
 BIC(model5)
 ```
-## Answer: Four separate models were created, each adding additional levels of complexity, starting with the null model, then progressing through a model which included subject level intercepts, then including target.frames as a main effect, and then calculating separate slopes for target.frames at the subject level. A fifth model was also generated which calculated slopes and intercepts independently for subject level slopes and intercepts. For each of these models, they were compared utilizing a log likelihood test to determine if there was a statistically significant difference between them.
+Answer: Four separate models were created, each adding additional levels of complexity, starting with the null model, then progressing through a model which included subject level intercepts, then including target.frames as a main effect, and then calculating separate slopes for target.frames at the subject level. A fifth model was also generated which calculated slopes and intercepts independently for subject level slopes and intercepts. For each of these models, they were compared utilizing a log likelihood test to determine if there was a statistically significant difference between them.
 
-## Answer: The log likelihood test indicated a statistically significant improvement in predictive power for all but the fifth model, suggesting the fourth model would be the best option (the model which included target.frames as a group_level effect and calculated separate slopes and intercepts for subject). In order to confirm this, AIC and BIC were also determined, and the lowest AIC and BIC were associated with the fourth model. For these reasons, the fourth model was selected.
+Answer: The log likelihood test indicated a statistically significant improvement in predictive power for all but the fifth model, suggesting the fourth model would be the best option (the model which included target.frames as a group_level effect and calculated separate slopes and intercepts for subject). In order to confirm this, AIC and BIC were also determined, and the lowest AIC and BIC were associated with the fourth model. For these reasons, the fourth model was selected.
 
   ii. also include in the results section whether the fit didn't look good for any of the subjects. If so, identify those subjects in the report, and judge (no statistical test) whether their performance (accuracy) differed from that of the other subjects. Was their performance better than chance? (Use a statistical test this time) (50 %)
 
@@ -705,7 +708,7 @@ acc_4_1
 
 ## Accuracy of .70, so the accuracy was greater than for subject 12 or 24 even accounting for class imbalance. 
 ```
-## Answer: It does appear that the accuracy for subjects 24 and 12 was lower than that of subject 1, which was selected randomly from the other subjects. Now testing whether their performance was better than chance.
+Answer: It does appear that the accuracy for subjects 24 and 12 was lower than that of subject 1, which was selected randomly from the other subjects. Now testing whether their performance was better than chance.
 
 ```{r}
 binom.test(x = sum(model4_12$correct == model4_12$predictions), n = nrow(model4_12), p = .5, alternative = "greater")
@@ -713,7 +716,7 @@ binom.test(x = sum(model4_12$correct == model4_12$predictions), n = nrow(model4_
 binom.test(x = sum(model4_24$correct == model4_24$predictions), n = nrow(model4_24), p = .5, alternative = "greater")
 #p of 1.434e-9
 ```
-## Answer: In both subjects 12 and 24, the accuracy was still statistically significantly better than .5, despite appearing to be lower than the accuracy in other subjects. So our model still does better than random chance even in the cases that it does not model the correctness relationship as well as it could. 
+Answer: In both subjects 12 and 24, the accuracy was still statistically significantly better than .5, despite appearing to be lower than the accuracy in other subjects. So our model still does better than random chance even in the cases that it does not model the correctness relationship as well as it could. 
 
 3) Now add _pas_ to the group-level effects - if a log-likelihood ratio test justifies this, also add the interaction between _pas_ and _target.frames_ and check whether a log-likelihood ratio test justifies this.  
 ```{r}
@@ -725,10 +728,10 @@ model7 <- glmer(correct ~ target.frames + pas + target.frames*pas + (1+target.fr
 
 loglik_test(model6, model7, 3)
 ```
-## Answer: In both the addition of pas and the inclusion of the interaction effect, a log-likelihood ratio test justifies these additions. 
+Answer: In both the addition of pas and the inclusion of the interaction effect, a log-likelihood ratio test justifies these additions. 
 
   i. if your model doesn't converge, try a different optimizer  
-## Answer: The models converged. 
+Answer: The models converged. 
 
   ii. plot the estimated group-level functions over `xlim=c(0, 8)` for each of the four PAS-ratings - add this plot to your report (see: 5.2.i) and add a description of your chosen model. Describe how _pas_ affects accuracy together with target duration if at all. Also comment on the estimated functions' behaviour at target.frame=0 - is that behaviour reasonable?  
 ```{r}
@@ -742,9 +745,9 @@ temp3 %>%
   labs(x = "Target Frames", y = 'Probability of Correct Response')+
   facet_wrap(~subject)
 ```
-## Answer: The chosen model predicts whether or not a subject answered even or odd correctly. The group level effects of pas and target.frames were included, along with the interaction effect of pas and target frames. Furthermore, this model included  subject-level intercepts and slopes for target.frames. A higher pas and a higher number of target frames both generally correspond to a higher accuracy across most subjects. When target.frames = 0, the model predicted a probability of greater than 0 (somewhere around .4 to .5) that the person would answer correctly. This could be interpreted a few ways - technically, if there are zero frames then the person could not reasonably determine whether the image was even or odd. However, they could still randomly guess and they would have a 50% chance of being correct. In other words, with zero frames there was technically no image, but if we randomly assigned even/odd and then asked a subject to choose, we would expect them to be correct 50% of the time even without seeing the image. 
+Answer: The chosen model predicts whether or not a subject answered even or odd correctly. The group level effects of pas and target.frames were included, along with the interaction effect of pas and target frames. Furthermore, this model included  subject-level intercepts and slopes for target.frames. A higher pas and a higher number of target frames both generally correspond to a higher accuracy across most subjects. When target.frames = 0, the model predicted a probability of greater than 0 (somewhere around .4 to .5) that the person would answer correctly. This could be interpreted a few ways - technically, if there are zero frames then the person could not reasonably determine whether the image was even or odd. However, they could still randomly guess and they would have a 50% chance of being correct. In other words, with zero frames there was technically no image, but if we randomly assigned even/odd and then asked a subject to choose, we would expect them to be correct 50% of the time even without seeing the image. 
 
-## Answer: In our model, at zero frames the probability goes below .5 (below chance) in most cases. This is not reasonable and may suggest a way in which we could improve the model. 
+Answer: In our model, at zero frames the probability goes below .5 (below chance) in most cases. This is not reasonable and may suggest a way in which we could improve the model. 
 
 ## EXERCISE 6 - Test linear hypotheses
 In this section we are going to test different hypotheses. We assume that we have already proved that more objective evidence (longer duration of stimuli) is sufficient to increase accuracy in and of itself and that more subjective evidence (higher PAS ratings) is also sufficient to increase accuracy in and of itself.  
@@ -757,7 +760,7 @@ ex6.1 <- glmer(correct ~ pas * target.frames + (target.frames | subject), data =
 
 summary(ex6.1)
 ```
-## Answer: By looking at the interaction of pas2 and target frames, we can see that there is an increased slope when compared to pas1 which suggests an increase in the speed with which accuracy goes up relative to pas1.
+Answer: By looking at the interaction of pas2 and target frames, we can see that there is an increased slope when compared to pas1 which suggests an increase in the speed with which accuracy goes up relative to pas1.
     
 2) `summary` won't allow you to test whether accuracy increases faster with objective evidence for PAS 3 than for PAS 2 (unless you use `relevel`, which you are not allowed to in this exercise). Instead, we'll be using the function `glht` from the `multcomp` package
     i. To redo the test in 6.1.i, you can create a _contrast_ vector. This vector will have the length of the number of estimated group-level effects and any specific contrast you can think of can be specified using this. For redoing the test from 6.1.i, the code snippet below will do
@@ -788,10 +791,10 @@ contrast.vector <- matrix(c(0, 0, 0, 0, 0, 0, -1, 1), nrow=1)
 gh <- glht(ex6.1, contrast.vector)
 print(summary(gh))
 ```
-## Answer: The change in rate of accuracy increase may be slightly greater in pas4 than pas3, however this difference is not statistically significant. 
+Answer: The change in rate of accuracy increase may be slightly greater in pas4 than pas3, however this difference is not statistically significant. 
     
 3) Finally, test that whether the difference between PAS 2 and 1 (tested in 6.1.i) is greater than the difference between PAS 4 and 3 (tested in 6.2.iii)
-## Answer: The difference in the rate of change of correctness with target.frames for PAS 2 is .447 greater than in PAS 1, when compared to a difference of only .0106 between PAS 3 and 4. Therefore the difference between PAS 2 and 1 is greater than the difference between PAS 4 and 3.
+Answer: The difference in the rate of change of correctness with target.frames for PAS 2 is .447 greater than in PAS 1, when compared to a difference of only .0106 between PAS 3 and 4. Therefore the difference between PAS 2 and 1 is greater than the difference between PAS 4 and 3.
 
 ## EXERCISE 7 - Estimate psychometric functions for the Perceptual Awareness Scale and evaluate them  
 We saw in 5.3 that the estimated functions went below chance at a target duration of 0 frames (0 ms). This does not seem reasonable, so we will be trying a different approach for fitting here.  
@@ -856,7 +859,7 @@ params7 <- params7 %>%
 
 ## optim(par = c(.5, 1, 1, 1), fn = RSS, data = sub7, method = 'L-BFGS-B', lower = c(.5, .99, -Inf, -Inf), upper = c(.51, 1, Inf, Inf))
 ```
-## Answer: Good options for a and b are .5 and 1 respectively. "a" is the minimum probability of correctness, which should minimize at random chance, and "b" is the maximum probability of correctness, which should maximize at 1. Because the entire goal of this sigmoid based approach is to ensure that our model minimizes at chance (where it minimized slightly below chance in exercise 5), I am going to set the lower bound for a as .5 (chance). The upper bound for this floor value should also be chance, so I am only going to allow it to vary up to .51. Similarly, the maximum accuracy level (b) has to be 1, so I am going to force it to be close to 1 by selecting very narrow upper and lower bounds. 
+Answer: Good options for a and b are .5 and 1 respectively. "a" is the minimum probability of correctness, which should minimize at random chance, and "b" is the maximum probability of correctness, which should maximize at 1. Because the entire goal of this sigmoid based approach is to ensure that our model minimizes at chance (where it minimized slightly below chance in exercise 5), I am going to set the lower bound for a as .5 (chance). The upper bound for this floor value should also be chance, so I am only going to allow it to vary up to .51. Similarly, the maximum accuracy level (b) has to be 1, so I am going to force it to be close to 1 by selecting very narrow upper and lower bounds. 
 
   ii. Plot the fits for the PAS ratings on a single plot (for subject 7) `xlim=c(0, 8)`
 ```{r}
@@ -902,7 +905,7 @@ temp3 %>%
 ```
 
   iv. Comment on the differences between the fits - mention some advantages and disadvantages of each way 
-## Answer: The sigmoid fit does force a minimum of chance, however it does this in a somewhat awkward way, which we see at PAS 3. The prediction hits very close to .5 at 1 frame, so it simply forces it not to dip below .5 when we go down to zero frames, but in a way that does not fit the rest of the curve. In addition, PAS 4 predicts significantly above chance at target.frames = 0, which is wrong. Also notably, it creates nearly-flat lines for pas 1 and 2, as opposed to our glmer model which shows a curve for both 1 and 2 (particularly 2 has a large slope). It appears that an advantage of the sigmoid approach is our ability to force a "floor" for our probability that is more reasonable, however it has some issues in how it overall models the data when compared to the 6.1 glmer approach. 
+Answer: The sigmoid fit does force a minimum of chance, however it does this in a somewhat awkward way, which we see at PAS 3. The prediction hits very close to .5 at 1 frame, so it simply forces it not to dip below .5 when we go down to zero frames, but in a way that does not fit the rest of the curve. In addition, PAS 4 predicts significantly above chance at target.frames = 0, which is wrong. Also notably, it creates nearly-flat lines for pas 1 and 2, as opposed to our glmer model which shows a curve for both 1 and 2 (particularly 2 has a large slope). It appears that an advantage of the sigmoid approach is our ability to force a "floor" for our probability that is more reasonable, however it has some issues in how it overall models the data when compared to the 6.1 glmer approach. 
 
 2) Finally, estimate the parameters for all subjects and each of their four PAS ratings. Then plot the estimated function at the group-level by taking the mean for each of the four parameters, _a_, _b_, _c_ and _d_ across subjects. A function should be estimated for each PAS-rating (it should look somewhat similar to Fig. 3 from the article:  https://doi.org/10.1016/j.concog.2019.03.007)
 
@@ -950,4 +953,5 @@ sig_preds %>%
 ```
 
   i. compare with the figure you made in 5.3.ii and comment on the differences between the fits - mention some advantages and disadvantages of both.
-## Answer: In order to get this plot to look similar to the plot in figure 3 of the paper, it was necessary to change the constraints for parameters _c_ and _d_ to be only allowed to vary between -20 and 20 as opposed to -inf to inf. If allowed to vary from -inf to inf, then PAS 1, 2, and 4 all resulted in a flat line at different probabilities. When compared to 5.3.ii, this model does do a better job of ensuring that probabilities do not go below chance, however some of the probabilities of answering correctly at 0 frames here are significantly above chance where 5.3.ii did a better job generally of not overestimating probability at low frame values. In short, this sigmoid approach does a better job of not underestimating chance, where the 5.3.ii approach does a better job of not overestimating chance. Also, the limits I put on c and d were somewhat arbitrary, where I did not make any arbitrary parameter limitations in 5.3.ii.
+
+Answer: In order to get this plot to look similar to the plot in figure 3 of the paper, it was necessary to change the constraints for parameters _c_ and _d_ to be only allowed to vary between -20 and 20 as opposed to -inf to inf. If allowed to vary from -inf to inf, then PAS 1, 2, and 4 all resulted in a flat line at different probabilities. When compared to 5.3.ii, this model does do a better job of ensuring that probabilities do not go below chance, however some of the probabilities of answering correctly at 0 frames here are significantly above chance where 5.3.ii did a better job generally of not overestimating probability at low frame values. In short, this sigmoid approach does a better job of not underestimating chance, where the 5.3.ii approach does a better job of not overestimating chance. Also, the limits I put on c and d were somewhat arbitrary, where I did not make any arbitrary parameter limitations in 5.3.ii.
